@@ -3,23 +3,42 @@ package server
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/gx/youtubeDownloader/config"
+	"github.com/gx/youtubeDownloader/database"
 	"github.com/gx/youtubeDownloader/log"
 )
 
 type Server struct {
-	Router *gin.Engine
+	Router    *gin.Engine
+	Config    *config.Config
+	Logger    *log.Log
+	Ws        *websocket.Conn
+	SessionID string `json:"sessionID,omitempty"`
+	Storage   string `json:"storage,omitempty"`
+	Database  *database.DB
 }
 
 func (s *Server) Host() {
-	log.Print("Creating router")
-	gin.SetMode(gin.ReleaseMode)
-	s.Router = gin.Default()
-	log.Print("Setting routes")
-	s.SetupRoutes()
-	log.Print("Running the server")
-	err := s.Router.Run()
-	if err != nil {
-		log.Print(fmt.Sprintf("Failed to start server for this reason: %v", err.Error()))
-		return
+	conf := &config.Config{}
+	if co, err := conf.Get(); err != nil {
+		s.Logger.Error(err.Error())
+	} else {
+		s.Config = co
+		s.Database.Config = co
+		s.Logger.Info("Creating router")
+		gin.SetMode(gin.ReleaseMode)
+
+		s.Router = gin.Default()
+
+		s.Logger.Info("Setting routes")
+		s.SetupRoutes()
+
+		s.Logger.Info("Running the server")
+		if err := s.Router.Run(); err != nil {
+			s.Logger.Info(fmt.Sprintf("Failed to start server for this reason: %v", err.Error()))
+			return
+		}
 	}
+
 }

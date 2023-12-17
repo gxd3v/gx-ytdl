@@ -1,6 +1,8 @@
 package server
 
-import c "github.com/gx/youtubeDownloader/constants"
+import (
+	c "github.com/gx/youtubeDownloader/constants"
+)
 
 type Route struct {
 	Path       string `json:"path"`
@@ -10,10 +12,5 @@ type Route struct {
 }
 
 func (s *Server) SetupRoutes() {
-	r := &Resource{
-		Ws:        nil,
-		SessionID: "",
-	}
-
-	s.Router.GET(c.ROUTE_CONNECT, r.UpgradeConnection)
+	s.Router.GET(c.ROUTE_CONNECT, s.UpgradeConnection)
 }
