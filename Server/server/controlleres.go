@@ -30,6 +30,9 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 	s.Logger.Info("Connection upgraded")
 	s.Ws = ws
 
+	s.Logger.Info("Checking for connection reopening")
+	s.SessionID = ctx.Param(c.SESSION_PARAMETER)
+
 	s.Logger.Info("Listening for codes")
 	s.StartListener(ctx)
 }
@@ -37,7 +40,6 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 func (s *Server) StartListener(ctx *gin.Context) {
 	defer func() {
 		if msg := recover(); msg != nil {
-			s.Logger.Info("boom")
 			s.SendMessage(ctx, c.CODE_ERROR_MALFORMED_MESSAGE, fmt.Sprintf("%s\n%+v", c.TEXT_ERROR_MALFORMED_MESSAGE, msg))
 			s.StartListener(ctx)
 		}
@@ -45,16 +47,18 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 	if s.SessionID == "" {
 		s.SessionID = uuid.New().String()
+		s.Logger.Info("Creating a new session", s.SessionID)
 	}
 
 	for {
 		msgType, message, err := s.Ws.ReadMessage()
 		if err != nil {
-			s.Logger.Info(fmt.Sprintf("Failed to read message from connection %v", err.Error()))
 			if msgType == -1 {
+				s.Logger.Warning(fmt.Sprintf("Connection closed on client: %v - %v", s.SessionID, err.Error()))
 				_ = s.Ws.Close()
 				break
 			}
+			s.Logger.Info(fmt.Sprintf("Failed to read message from connection %v", err.Error()))
 			continue
 		}
 
