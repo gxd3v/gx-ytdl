@@ -3,21 +3,8 @@ package server
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"github.com/gx/youtubeDownloader/config"
-	"github.com/gx/youtubeDownloader/database"
-	"github.com/gx/youtubeDownloader/log"
 )
-
-type Server struct {
-	Router    *gin.Engine
-	Config    *config.Config
-	Logger    *log.Log
-	Ws        *websocket.Conn
-	SessionID string `json:"sessionID,omitempty"`
-	Storage   string `json:"storage,omitempty"`
-	Database  *database.DB
-}
 
 func (s *Server) Host() {
 	conf := &config.Config{}

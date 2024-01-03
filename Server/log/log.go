@@ -11,11 +11,6 @@ import (
 	"time"
 )
 
-type Log struct {
-	Buffer *bytes.Buffer
-	Inner  zerolog.Logger
-}
-
 func (l *Log) callerLocation(file string, line int) string {
 	fileName := filepath.Base(file)
 	parentFolder := filepath.Base(filepath.Dir(file))

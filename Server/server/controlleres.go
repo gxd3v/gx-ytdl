@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -36,6 +37,7 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 func (s *Server) StartListener(ctx *gin.Context) {
 	defer func() {
 		if msg := recover(); msg != nil {
+			s.Logger.Info("boom")
 			s.SendMessage(ctx, c.CODE_ERROR_MALFORMED_MESSAGE, fmt.Sprintf("%s\n%+v", c.TEXT_ERROR_MALFORMED_MESSAGE, msg))
 			s.StartListener(ctx)
 		}
@@ -46,14 +48,17 @@ func (s *Server) StartListener(ctx *gin.Context) {
 	}
 
 	for {
-		_, message, err := s.Ws.ReadMessage()
+		msgType, message, err := s.Ws.ReadMessage()
 		if err != nil {
 			s.Logger.Info(fmt.Sprintf("Failed to read message from connection %v", err.Error()))
+			if msgType == -1 {
+				_ = s.Ws.Close()
+				break
+			}
 			continue
 		}
-		s.Logger.Info("Got a message")
-		s.Logger.Info(fmt.Sprintf("%+v", string(message)))
 
+		s.Logger.Info("Got a message", base64.StdEncoding.EncodeToString(message))
 		msg := models.WebsocketMessage{}
 
 		err = json.Unmarshal(message, &msg)
@@ -62,9 +67,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 			s.SendMessage(ctx, c.CODE_ERROR_MALFORMED_MESSAGE, c.TEXT_ERROR_MALFORMED_MESSAGE)
 			continue
 		}
-
-		s.Logger.Info("Parsed message")
-		s.Logger.Info(fmt.Sprintf("%+v", msg))
+		s.Logger.Info("Parsed message", base64.StdEncoding.EncodeToString([]byte(msg.ToString())))
 
 		s.Logger.Info("Checking which action to take")
 		switch strings.ToUpper(msg.Code) {

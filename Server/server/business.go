@@ -15,20 +15,14 @@ import (
 	"strings"
 )
 
-//type Resource struct {
-//	Ws        *websocket.Conn
-//	SessionID string         `json:"sessionID,omitempty"`
-//	Storage   string         `json:"storage,omitempty"`
-//}
-
 func (s *Server) Download(ctx *gin.Context, audio bool, url string) {
 	s.Logger.Info(fmt.Sprintf("Creating folder %s to store downloads", s.SessionID))
-	s.Storage = fmt.Sprintf(c.OUTPUT_PATH, s.SessionID)
+	s.Storage = fmt.Sprintf(s.Config.OutputPath, s.SessionID)
 	_ = os.Mkdir(s.Storage, os.ModeAppend)
 
-	cmd := exec.Command(c.PYTHON_BINARY, c.DOWNLOADER_PATH)
+	cmd := exec.Command(s.Config.PythonBinary, s.Config.DownloaderPath)
 	cmd.Args = append(cmd.Args, "-u", url)
-	cmd.Args = append(cmd.Args, "-op", fmt.Sprintf(c.OUTPUT_PATH, s.SessionID))
+	cmd.Args = append(cmd.Args, "-op", fmt.Sprintf(s.Config.OutputPath, s.SessionID))
 	if audio {
 		cmd.Args = append(cmd.Args, "-a")
 	}
