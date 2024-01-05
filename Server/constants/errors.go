@@ -8,4 +8,5 @@ const (
 	TEXT_ERROR_DOWNLOAD_FAILED        = "The download failed... \n %s"
 
 	TEXT_ERROR_FOLDER_ALREADY_EXISTS = "The folder for the session %s already exists"
+	TEXT_ERROR_FAILED_LISTING_FILES  = "Failed to list the files in your session"
 )

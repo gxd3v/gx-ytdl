@@ -50,10 +50,14 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		s.Logger.Info("Creating a new session", s.SessionID)
 	}
 
+	s.SendMessage(ctx, c.CODE_SESSION_ID, s.SessionID)
+	s.Logger.SetSessionID(s.SessionID)
+	s.CreateSessionFolder()
+
 	for {
 		msgType, message, err := s.Ws.ReadMessage()
 		if err != nil {
-			if msgType == -1 {
+			if msgType == c.CLIENT_DISCONNECTED {
 				s.Logger.Warning(fmt.Sprintf("Connection closed on client: %v - %v", s.SessionID, err.Error()))
 				_ = s.Ws.Close()
 				break
@@ -81,6 +85,10 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		case c.CODE_DOWNLOAD_VIDEO_AUDIO:
 			s.Download(ctx, false, msg.Payload["url"].(string))
+			continue
+
+		case c.CODE_LIST_FILES:
+			s.ListFiles(ctx)
 			continue
 
 		default:

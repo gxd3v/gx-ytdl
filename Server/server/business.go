@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -16,10 +17,6 @@ import (
 )
 
 func (s *Server) Download(ctx *gin.Context, audio bool, url string) {
-	s.Logger.Info(fmt.Sprintf("Creating folder %s to store downloads", s.SessionID))
-	s.Storage = fmt.Sprintf(s.Config.OutputPath, s.SessionID)
-	_ = os.Mkdir(s.Storage, os.ModeAppend)
-
 	cmd := exec.Command(s.Config.PythonBinary, s.Config.DownloaderPath)
 	cmd.Args = append(cmd.Args, "-u", url)
 	cmd.Args = append(cmd.Args, "-op", fmt.Sprintf(s.Config.OutputPath, s.SessionID))
@@ -35,14 +32,43 @@ func (s *Server) Download(ctx *gin.Context, audio bool, url string) {
 
 	go func() {
 		_ = cmd.Wait()
-		s.SendMessage(ctx, c.CODE_SUCCESS_VIDEO_DOWNLOADABLE, "path.join")
+		s.SendMessage(ctx, c.CODE_SUCCESS_VIDEO_DOWNLOADABLE, "File is done downloading")
 	}()
+}
+
+func (s *Server) CreateSessionFolder() {
+	s.Logger.Info(fmt.Sprintf("Creating folder %s to store downloads", s.SessionID))
+	s.Storage = fmt.Sprintf(s.Config.OutputPath, s.SessionID)
+	_ = os.Mkdir(s.Storage, os.ModeAppend)
+}
+
+func (s *Server) ListFiles(ctx *gin.Context) {
+	if files, err := os.ReadDir(fmt.Sprintf(s.Config.OutputPath, s.SessionID)); err != nil {
+		s.Logger.Error(c.TEXT_ERROR_FAILED_LISTING_FILES, err.Error())
+		s.SendMessage(ctx, c.CODE_ERROR_FAILED_LISTING_FILES, c.TEXT_ERROR_FAILED_LISTING_FILES)
+	} else {
+		if len(files) == 0 {
+			s.Logger.Info("No files in folder to show")
+			s.SendMessage(ctx, c.CODE_SUCCESS_LISTED_FILES, base64.StdEncoding.EncodeToString([]byte("{}")))
+		} else {
+			var output map[int]string
+
+			for index, file := range files {
+				output[index] = file.Name()
+			}
+
+			out, _ := json.Marshal(output)
+			s.SendMessage(ctx, c.CODE_SUCCESS_LISTED_FILES, base64.StdEncoding.EncodeToString(out))
+			s.Logger.Info("files in the session", base64.StdEncoding.EncodeToString(out))
+		}
+
+	}
 }
 
 func (s *Server) SendMessage(ctx *gin.Context, code, message string) {
 	success := true
 	if strings.Contains(code, c.CODE_ERROR_LETTER) {
-		s.Logger.Info(fmt.Sprintf("ERROR: %s", message))
+		s.Logger.Error(fmt.Sprintf("ERROR: %s", message))
 		success = false
 	}
 
