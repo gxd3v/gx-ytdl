@@ -9,4 +9,6 @@ const (
 
 	TEXT_ERROR_FOLDER_ALREADY_EXISTS = "The folder for the session %s already exists"
 	TEXT_ERROR_FAILED_LISTING_FILES  = "Failed to list the files in your session"
+	TEXT_ERROR_FAILED_DELETE_FILE    = "Failed to delete the file"
+	TEXT_ERROR_FAILED_DELETE_SESSION = "Failed to delete the session"
 )

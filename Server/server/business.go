@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -48,20 +49,51 @@ func (s *Server) ListFiles(ctx *gin.Context) {
 		s.SendMessage(ctx, c.CODE_ERROR_FAILED_LISTING_FILES, c.TEXT_ERROR_FAILED_LISTING_FILES)
 	} else {
 		if len(files) == 0 {
-			s.Logger.Info("No files in folder to show")
+			s.Logger.Warning("No files in folder to show")
 			s.SendMessage(ctx, c.CODE_SUCCESS_LISTED_FILES, base64.StdEncoding.EncodeToString([]byte("{}")))
 		} else {
-			var output map[int]string
+			output := map[int]string{}
 
 			for index, file := range files {
 				output[index] = file.Name()
 			}
 
 			out, _ := json.Marshal(output)
-			s.SendMessage(ctx, c.CODE_SUCCESS_LISTED_FILES, base64.StdEncoding.EncodeToString(out))
 			s.Logger.Info("files in the session", base64.StdEncoding.EncodeToString(out))
+			s.SendMessage(ctx, c.CODE_SUCCESS_LISTED_FILES, base64.StdEncoding.EncodeToString(out))
 		}
 
+	}
+}
+
+func (s *Server) SendFileToClient(ctx *gin.Context, fileName string) {
+	s.Logger.Info("Client requested file", fileName)
+	s.SendMessage(ctx, c.CODE_SUCCESS_READY_TO_SEND, fileName)
+}
+
+func (s *Server) DeleteFile(ctx *gin.Context, fileName string) {
+	err := os.Remove(path.Join(fmt.Sprintf(s.Config.OutputPath, s.SessionID), fileName))
+	if err != nil {
+		s.Logger.Error(c.TEXT_ERROR_FAILED_DELETE_FILE)
+		s.SendMessage(ctx, c.CODE_ERROR_FAILED_DELETE_FILE, c.TEXT_ERROR_FAILED_DELETE_FILE)
+	} else {
+		s.Logger.Info("Client removed file", fileName)
+		s.SendMessage(ctx, c.CODE_SUCCESS_DELETE_FILE, "File deleted")
+		s.ListFiles(ctx)
+	}
+}
+
+func (s *Server) DeleteSession(ctx *gin.Context) {
+	err := os.Remove(fmt.Sprintf(s.Config.OutputPath, s.SessionID))
+	if err != nil {
+		s.Logger.Error(c.TEXT_ERROR_FAILED_DELETE_SESSION)
+		s.SendMessage(ctx, c.CODE_SUCCESS_SESSION_DELETE, c.TEXT_ERROR_FAILED_DELETE_SESSION)
+	} else {
+		s.Logger.Info("Client removed session")
+		s.SendMessage(ctx, c.CODE_SUCCESS_SESSION_DELETE, "Session deleted")
+
+		_ = s.Ws.Close()
+		s.SessionID = ""
 	}
 }
 

@@ -48,9 +48,9 @@ func (s *Server) StartListener(ctx *gin.Context) {
 	if s.SessionID == "" {
 		s.SessionID = uuid.New().String()
 		s.Logger.Info("Creating a new session", s.SessionID)
+		s.SendMessage(ctx, c.CODE_SESSION_ID, s.SessionID)
 	}
 
-	s.SendMessage(ctx, c.CODE_SESSION_ID, s.SessionID)
 	s.Logger.SetSessionID(s.SessionID)
 	s.CreateSessionFolder()
 
@@ -89,6 +89,18 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		case c.CODE_LIST_FILES:
 			s.ListFiles(ctx)
+			continue
+
+		case c.CODE_SEND_FILE_TO_CLIENT:
+			s.SendFileToClient(ctx, msg.Payload["name"].(string))
+			continue
+
+		case c.CODE_DELETE_FILE:
+			s.DeleteFile(ctx, msg.Payload["name"].(string))
+			continue
+
+		case c.CODE_DELETE_SESSION:
+			s.DeleteSession(ctx)
 			continue
 
 		default:
