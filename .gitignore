@@ -1,5 +1,5 @@
 storage/
-
+.svelte-kit
 .idea/
 *.exe
 *.exe~
@@ -20,7 +20,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -136,6 +135,7 @@ dist
 .dynamodb/
 .tern-port
 .vscode-test
+.yarn
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
