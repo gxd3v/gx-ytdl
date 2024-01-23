@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+import "codes/actions.proto";
+import "codes/errors.proto";
+import "codes/success.proto";
+import "global.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/any.proto";
+
+message DownloadRequest{
+  ActionsEnum code = 1;
+  message Payload{
+    bool audio = 1;
+    string url = 2;
+  }
+}
+
+message DownloadResponse{
+  bool successful = 1;
+  Success success = 2;
+  Error error = 3;
+  string data = 4;
+}
+
+/*===================================*/
+
+message CreateSessionFolderRequest{
+  ActionsEnum code = 1;
+  string session = 2;
+}
+
+message CreateSessionFolderResponse{
+  bool successful = 1;
+  Success success = 2;
+  Error error = 3;
+  bool created = 4;
+}
+
+/*===================================*/
+
+message ListFilesRequest{
+  ActionsEnum code = 1;
+  string session = 2;
+}
+
+message ListFilesResponse{
+  bool successful = 1;
+  Success success = 2;
+  Error error = 3;
+  repeated File files = 4;
+}
+
+/*===================================*/
+
+message SendFileToClientRequest{
+  ActionsEnum code = 1;
+  File file = 2;
+}
+
+message SendFileToClientResponse{
+  bool successful = 1;
+  Success success = 2;
+  Error error = 3;
+  google.protobuf.Any file = 4;
+}
+
+/*===================================*/
+
+message DeleteFileRequest{
+  ActionsEnum code = 1;
+  File file = 2;
+}
+
+message DeleteFileResponse{
+  bool successful = 1;
+  Success success = 2;
+  Error error = 3;
+}
+
+/*===================================*/
+
+message DeleteSessionRequest{
+  ActionsEnum code = 1;
+  string session = 2;
+}
+
+message DeleteSessionResponse{
+  bool successful = 1;
+  Success success = 2;
+  Error error = 3;
+}
+
+/*===================================*/
+
+
+
+
+
+

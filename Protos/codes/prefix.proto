@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.EnumValueOptions {
+  optional string name = 51234;
+}
+
+enum PrefixesEnum {
+  ACTION  = 0 [(name) = "A"];
+  SUCCESS = 1 [(name) = "S"];
+  ERROR   = 2 [(name) = "E"];
+}

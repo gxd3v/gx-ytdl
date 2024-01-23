@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "codes/errors.proto";
+import "codes/success.proto";
+import "google/protobuf/timestamp.proto";
+
+message Success{
+  SuccessEnum code = 1;
+  optional string status = 2;
+}
+
+message Error{
+  ErrorsEnum code = 1;
+  string error = 2;
+}
+
+message File{
+  string name = 1;
+  google.protobuf.Timestamp created = 2;
+  int64 timesDownloaded = 3;
+  google.protobuf.Timestamp ttl = 4;
+  int64 size = 5;
+}
