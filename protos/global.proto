@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+package protos;
+option go_package = "../protos";
+
 import "codes/errors.proto";
 import "codes/success.proto";
 import "google/protobuf/timestamp.proto";
