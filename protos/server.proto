@@ -1,7 +1,11 @@
 syntax = "proto3";
 
+package protos;
+
 import "messages.proto";
 import "google/protobuf/empty.proto";
+
+option go_package = "github.com/gx/gx-ytdl/server/protos";
 
 service Server{
   rpc Download(DownloadRequest) returns (DownloadResponse);

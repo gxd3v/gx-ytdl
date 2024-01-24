@@ -3,15 +3,15 @@ syntax = "proto3";
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.EnumValueOptions {
-  optional string name = 51234;
+  optional string error_code = 51233;
 }
 
 enum ErrorsEnum{
-  MALFORMED_MESSAGE     = 0 [(name) = "E0000"];
-  NOT_RECOGNIZED        = 1 [(name) = "E0001"];
-  FOLDER_ALREADY_EXISTS = 2 [(name) = "E0002"];
-  FAILED_DOWNLOAD       = 3 [(name) = "E0003"];
-  FAILED_LISTING_FILES  = 4 [(name) = "E0004"];
-  FAILED_DELETE_FILE    = 5 [(name) = "E0005"];
-  FAILED_DELETE_SESSION = 6 [(name) = "E0006"];
+  MALFORMED_MESSAGE     = 0 [(error_code) = "E0000"];
+  NOT_RECOGNIZED        = 1 [(error_code) = "E0001"];
+  FOLDER_ALREADY_EXISTS = 2 [(error_code) = "E0002"];
+  FAILED_DOWNLOAD       = 3 [(error_code) = "E0003"];
+  FAILED_LISTING_FILES  = 4 [(error_code) = "E0004"];
+  FAILED_DELETE_FILE    = 5 [(error_code) = "E0005"];
+  FAILED_DELETE_SESSION = 6 [(error_code) = "E0006"];
 }

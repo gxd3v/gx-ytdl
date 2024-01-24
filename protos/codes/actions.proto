@@ -3,20 +3,20 @@ syntax = "proto3";
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.EnumValueOptions {
-  optional string name = 51234;
+  optional string action_code = 51232;
 }
 
 enum ActionsEnum{
-  HEALTH_CHECK         = 0 [(name) = "A0000"];
-  SESSION_ID           = 1 [(name) = "A0001"];
+  HEALTH_CHECK         = 0 [(action_code) = "A0000"];
+  SESSION_ID           = 1 [(action_code) = "A0001"];
 
-  DOWNLOAD_VIDEO_AUDIO = 2 [(name) = "A1001"];
-  DOWNLOAD_VIDEO       = 3 [(name) = "A1002"];
+  DOWNLOAD_VIDEO_AUDIO = 2 [(action_code) = "A1001"];
+  DOWNLOAD_VIDEO       = 3 [(action_code) = "A1002"];
 
-  DOWNLOAD_AUDIO       = 4 [(name) = "A1003"];
-  LIST_FILES           = 5 [(name) = "A2000"];
-  SEND_FILE_TO_CLIENT  = 6 [(name) = "A2001"];
+  DOWNLOAD_AUDIO       = 4 [(action_code) = "A1003"];
+  LIST_FILES           = 5 [(action_code) = "A2000"];
+  SEND_FILE_TO_CLIENT  = 6 [(action_code) = "A2001"];
 
-  DELETE_FILE          = 7 [(name) = "A3000"];
-  DELETE_SESSION       = 8 [(name) = "A3001"];
+  DELETE_FILE          = 7 [(action_code) = "A3000"];
+  DELETE_SESSION       = 8 [(action_code) = "A3001"];
 }

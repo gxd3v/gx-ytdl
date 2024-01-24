@@ -3,13 +3,13 @@ syntax = "proto3";
 import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.EnumValueOptions {
-  optional string name = 51234;
+  optional string success_code = 51234;
 }
 
 enum SuccessEnum{
-  VIDEO_DOWNLOADABLE = 0 [(name) = "S0001"];
-  LISTED_FILES       = 1 [(name) = "S0002"];
-  READY_TO_SEND      = 2 [(name) = "S0002"];
-  DELETE_FILE        = 3 [(name) = "S0003"];
-  SESSION_DELETE     = 4 [(name) = "S0003"];
+  VIDEO_DOWNLOADABLE = 0 [(success_code) = "S0001"];
+  LISTED_FILES       = 1 [(success_code) = "S0002"];
+  READY_TO_SEND      = 2 [(success_code) = "S0002"];
+  DELETED_FILE       = 3 [(success_code) = "S0003"];
+  SESSION_DELETE     = 4 [(success_code) = "S0003"];
 }

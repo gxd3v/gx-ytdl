@@ -1,10 +1,7 @@
 syntax = "proto3";
 
 import "codes/actions.proto";
-import "codes/errors.proto";
-import "codes/success.proto";
 import "global.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/any.proto";
 
 message DownloadRequest{
