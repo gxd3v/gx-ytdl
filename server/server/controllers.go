@@ -8,10 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	c "github.com/gx/youtubeDownloader/constants"
-	"github.com/gx/youtubeDownloader/models"
+	"github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
 	"net/http"
-	"strings"
 )
 
 func (s *Server) UpgradeConnection(ctx *gin.Context) {
@@ -40,7 +39,10 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 func (s *Server) StartListener(ctx *gin.Context) {
 	defer func() {
 		if msg := recover(); msg != nil {
-			s.SendMessage(ctx, c.CODE_ERROR_MALFORMED_MESSAGE, fmt.Sprintf("%s\n%+v", c.TEXT_ERROR_MALFORMED_MESSAGE, msg))
+			s.SendMessage(ctx, &protos.PanicResponse{
+				Code:    protos.ErrorsEnum_MALFORMED_MESSAGE,
+				Message: fmt.Sprintf("%s\n%+v", c.TEXT_ERROR_MALFORMED_MESSAGE, msg),
+			})
 			s.StartListener(ctx)
 		}
 	}()
@@ -48,11 +50,25 @@ func (s *Server) StartListener(ctx *gin.Context) {
 	if s.SessionID == "" {
 		s.SessionID = uuid.New().String()
 		s.Logger.Info("Creating a new session", s.SessionID)
-		s.SendMessage(ctx, c.CODE_SESSION_ID, s.SessionID)
+		s.SendMessage(ctx, &protos.CreateSessionResponse{
+			Code:      protos.SuccessEnum_SESSION_ID,
+			SessionId: s.SessionID,
+		})
 	}
 
 	s.Logger.SetSessionID(s.SessionID)
-	s.CreateSessionFolder()
+	_, err := s.CreateSessionFolder(ctx, &protos.CreateSessionFolderRequest{
+		Code: protos.ActionsEnum_NEW_SESSION,
+		Payload: &protos.CreateSessionFolderRequestPayload{
+			Session: s.SessionID,
+		},
+	})
+	if err != nil {
+		s.SendMessage(ctx, &protos.PanicResponse{
+			Code:    protos.ErrorsEnum_FOLDER_ALREADY_EXISTS,
+			Message: err.Error(),
+		})
+	}
 
 	for {
 		msgType, message, err := s.Ws.ReadMessage()
@@ -67,46 +83,113 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		}
 
 		s.Logger.Info("Got a message", base64.StdEncoding.EncodeToString(message))
-		msg := models.WebsocketMessage{}
+		messageActionCode := struct {
+			Code string `json:"code"`
+		}{}
 
-		err = json.Unmarshal(message, &msg)
-		if err != nil {
-			s.Logger.Info("Message was malformed")
-			s.SendMessage(ctx, c.CODE_ERROR_MALFORMED_MESSAGE, c.TEXT_ERROR_MALFORMED_MESSAGE)
+		err = json.Unmarshal(message, &messageActionCode)
+		if ok := s.checkMessageError(ctx, err); !ok {
 			continue
 		}
-		s.Logger.Info("Parsed message", base64.StdEncoding.EncodeToString([]byte(msg.ToString())))
 
 		s.Logger.Info("Checking which action to take")
-		switch strings.ToUpper(msg.Code) {
-		case c.CODE_DOWNLOAD_AUDIO:
-			s.Download(ctx, true, msg.Payload["url"].(string))
-			continue
+		switch protos.ActionCodeToIndex(messageActionCode.Code) {
+		case protos.ActionsEnum_DOWNLOAD_AUDIO.String():
+			payload := &protos.DownloadRequestPayload{}
 
-		case c.CODE_DOWNLOAD_VIDEO_AUDIO:
-			s.Download(ctx, false, msg.Payload["url"].(string))
-			continue
+			err = json.Unmarshal(message, &payload)
+			if ok := s.checkMessageError(ctx, err); ok {
+				download, _ := s.Download(ctx, &protos.DownloadRequest{
+					Code:    protos.ActionsEnum_DOWNLOAD_AUDIO,
+					Payload: payload,
+				})
 
-		case c.CODE_LIST_FILES:
-			s.ListFiles(ctx)
-			continue
+				s.SendMessage(ctx, download)
+				continue
+			}
 
-		case c.CODE_SEND_FILE_TO_CLIENT:
-			s.SendFileToClient(ctx, msg.Payload["name"].(string))
-			continue
-
-		case c.CODE_DELETE_FILE:
-			s.DeleteFile(ctx, msg.Payload["name"].(string))
-			continue
-
-		case c.CODE_DELETE_SESSION:
-			s.DeleteSession(ctx)
-			continue
+		//case c.CODE_DOWNLOAD_VIDEO_AUDIO:
+		//	s.Download(ctx, false, msg.Payload["url"].(string))
+		//	continue
+		//
+		//case c.CODE_LIST_FILES:
+		//	s.ListFiles(ctx)
+		//	continue
+		//
+		//case c.CODE_SEND_FILE_TO_CLIENT:
+		//	s.SendFileToClient(ctx, msg.Payload["name"].(string))
+		//	continue
+		//
+		//case c.CODE_DELETE_FILE:
+		//	s.DeleteFile(ctx, msg.Payload["name"].(string))
+		//	continue
+		//
+		//case c.CODE_DELETE_SESSION:
+		//	s.DeleteSession(ctx)
+		//	continue
 
 		default:
-			s.SendMessage(ctx, c.CODE_ERROR_CODE_NOT_RECOGNIZED, fmt.Sprintf(c.TEXT_ERROR_CODE_NOT_RECOGNIZED, msg.Code))
+			s.SendMessage(ctx, &protos.PanicResponse{
+				Code:    protos.ErrorsEnum_NOT_RECOGNIZED,
+				Message: fmt.Sprintf(c.TEXT_ERROR_CODE_NOT_RECOGNIZED, messageActionCode.Code),
+			})
 			continue
 		}
 
 	}
 }
+
+func (s *Server) checkMessageError(ctx *gin.Context, err error) bool {
+	if err != nil {
+		s.Logger.Info("Message was malformed", err.Error())
+		s.SendMessage(ctx, &protos.PanicResponse{
+			Code:    protos.ErrorsEnum_MALFORMED_MESSAGE,
+			Message: c.TEXT_ERROR_MALFORMED_MESSAGE,
+		})
+		return false
+	}
+
+	return true
+}
+
+func (s *Server) SendMessage(ctx *gin.Context, message interface{}) {
+	out, err := json.Marshal(message)
+	if err != nil {
+		status := http.StatusInternalServerError
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
+	}
+
+	if err = s.Ws.WriteMessage(websocket.TextMessage, out); err != nil {
+		status := http.StatusInternalServerError
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
+	}
+}
+
+//func (s *Server) SendMessage(ctx *gin.Context, code, message string) {
+//	success := true
+//	if strings.Contains(code, c.CODE_ERROR_LETTER) {
+//		s.Logger.Error(fmt.Sprintf("ERROR: %s", message))
+//		success = false
+//	}
+//
+//	resp := &models.WebsocketServerResponse{
+//		Id:      uuid.New().String(),
+//		Success: success,
+//		Data: models.JSONBodyMessage{
+//			Code:    code,
+//			Message: message,
+//		},
+//	}
+//
+//	out, err := json.Marshal(resp)
+//	if err != nil {
+//		status := http.StatusInternalServerError
+//		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
+//	}
+//
+//	err = s.Ws.WriteMessage(websocket.TextMessage, out)
+//	if err != nil {
+//		status := http.StatusInternalServerError
+//		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
+//	}
+//}

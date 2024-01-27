@@ -6,7 +6,18 @@ import (
 	"github.com/gx/youtubeDownloader/config"
 	"github.com/gx/youtubeDownloader/database"
 	"github.com/gx/youtubeDownloader/log"
+	"github.com/gx/youtubeDownloader/protos"
 )
+
+type Business interface {
+	UpgradeConnection(ctx *gin.Context)
+	Download(ctx *gin.Context, request *protos.DownloadRequest) (*protos.DownloadResponse, error)
+	CreateSessionFolder(ctx *gin.Context, request *protos.CreateSessionFolderRequest) (*protos.CreateSessionFolderResponse, error)
+	ListFiles(ctx *gin.Context, request *protos.ListFilesRequest) (*protos.ListFilesResponse, error)
+	SendFileToClient(ctx *gin.Context, request *protos.SendFileToClientRequest) (*protos.SendFileToClientResponse, error)
+	DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest) (*protos.DeleteFileResponse, error)
+	DeleteSession(ctx *gin.Context, request *protos.DeleteSessionRequest) (*protos.DeleteSessionResponse, error)
+}
 
 type Server struct {
 	Router    *gin.Engine

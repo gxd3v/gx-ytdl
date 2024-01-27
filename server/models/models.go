@@ -1,15 +1,22 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/gx/youtubeDownloader/protos"
+)
 
 type JSONBodyMessage struct {
 	Code    string `json:"status"`
 	Message string `json:"message"`
 }
 
+//type WebsocketMessage struct {
+//	Code    string                 `json:"code"`
+//	Payload map[string]interface{} `json:"payload"`
+//}
+
 type WebsocketMessage struct {
-	Code    string                 `json:"code"`
-	Payload map[string]interface{} `json:"payload"`
+	Code protos.ActionsEnum `json:"code"`
 }
 
 type WebsocketServerResponse struct {
