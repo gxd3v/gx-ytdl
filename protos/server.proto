@@ -4,8 +4,6 @@ package protos;
 option go_package = "../protos";
 
 import "messages.proto";
-import "google/protobuf/empty.proto";
-
 
 service Server{
   rpc Download(DownloadRequest) returns (DownloadResponse);
@@ -14,9 +12,4 @@ service Server{
   rpc SendFileToClient(SendFileToClientRequest) returns (SendFileToClientResponse);
   rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
   rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse);
-  rpc UpgradeConnection(UpgradeRequest) returns (google.protobuf.Empty);
-}
-
-message UpgradeRequest{
-  optional string oldSession = 1;
 }

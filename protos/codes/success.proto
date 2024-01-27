@@ -10,9 +10,11 @@ extend google.protobuf.EnumValueOptions {
 }
 
 enum SuccessEnum{
-  VIDEO_DOWNLOADABLE = 0 [(success_code) = "S0001"];
-  LISTED_FILES       = 1 [(success_code) = "S0002"];
-  READY_TO_SEND      = 2 [(success_code) = "S0002"];
-  DELETED_FILE       = 3 [(success_code) = "S0003"];
-  SESSION_DELETE     = 4 [(success_code) = "S0003"];
+  SESSION_ID             = 0 [(success_code) = "S0000"];
+  VIDEO_DOWNLOADABLE     = 1 [(success_code) = "S0001"];
+  LISTED_FILES           = 2 [(success_code) = "S0002"];
+  READY_TO_SEND          = 3 [(success_code) = "S0002"];
+  DELETED_FILE           = 4 [(success_code) = "S0003"];
+  SESSION_DELETE         = 5 [(success_code) = "S0004"];
+  SESSION_FOLDER_CREATED = 6 [(success_code) = "S0005"];
 }

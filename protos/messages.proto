@@ -4,90 +4,130 @@ package protos;
 option go_package = "../protos";
 
 import "codes/actions.proto";
+import "codes/success.proto";
 import "global.proto";
 import "google/protobuf/any.proto";
 
 message DownloadRequest{
-  ActionsEnum code = 1;
-  message Payload{
-    bool audio = 1;
-    string url = 2;
-  }
+  ActionsEnum            code    = 1 [json_name = "code"];
+  DownloadRequestPayload payload = 2 [json_name = "payload"];
+}
+
+message DownloadRequestPayload{
+  bool   audio = 1 [json_name = "audio"];
+  string url   = 2 [json_name = "url"];
 }
 
 message DownloadResponse{
-  bool successful = 1;
-  Success success = 2;
-  Error error = 3;
-  string data = 4;
+  string  id         = 1 [json_name = "id"];
+  bool    successful = 2 [json_name = "successful"];
+  Success success    = 3 [json_name = "success"];
+  Error   error      = 4 [json_name = "error"];
+  string  data       = 5 [json_name = "data"];
 }
 
 /*===================================*/
 
 message CreateSessionFolderRequest{
-  ActionsEnum code = 1;
-  string session = 2;
+  ActionsEnum                       code    = 1 [json_name = "code"];
+  CreateSessionFolderRequestPayload payload = 2 [json_name = "payload"];
+}
+
+message CreateSessionFolderRequestPayload{
+  string session = 1 [json_name = "session"];
 }
 
 message CreateSessionFolderResponse{
-  bool successful = 1;
-  Success success = 2;
-  Error error = 3;
-  bool created = 4;
+  string  id         = 1 [json_name = "id"];
+  bool    successful = 2 [json_name = "successful"];
+  Success success    = 3 [json_name = "success"];
+  Error   error      = 4 [json_name = "error"];
+  bool    created    = 5 [json_name = "created"];
 }
 
 /*===================================*/
 
 message ListFilesRequest{
-  ActionsEnum code = 1;
-  string session = 2;
+  ActionsEnum             code    = 1 [json_name = "code"];
+  ListFilesRequestPayload payload = 2 [json_name = "payload"];
+}
+
+message ListFilesRequestPayload {
+  string session = 1 [json_name = "session"];
 }
 
 message ListFilesResponse{
-  bool successful = 1;
-  Success success = 2;
-  Error error = 3;
-  repeated File files = 4;
+  string   id         = 1 [json_name = "id"];
+  bool     successful = 2 [json_name = "successful"];
+  Success  success    = 3 [json_name = "success"];
+  Error    error      = 4 [json_name = "error"];
+  repeated File files = 5 [json_name = "File"];
 }
 
 /*===================================*/
 
 message SendFileToClientRequest{
-  ActionsEnum code = 1;
-  File file = 2;
+  ActionsEnum                    code    = 1 [json_name = "code"];
+  SendFileToClientRequestPayload payload = 2 [json_name = "payload"];
+}
+
+message SendFileToClientRequestPayload{
+  File file = 1 [json_name = "file"];
 }
 
 message SendFileToClientResponse{
-  bool successful = 1;
-  Success success = 2;
-  Error error = 3;
-  google.protobuf.Any file = 4;
+  string              id         = 1 [json_name = "id"];
+  bool                successful = 2 [json_name = "successful"];
+  Success             success    = 3 [json_name = "success"];
+  Error               error      = 4 [json_name = "error"];
+  google.protobuf.Any file       = 5 [json_name = "file"];
 }
 
 /*===================================*/
 
 message DeleteFileRequest{
-  ActionsEnum code = 1;
-  File file = 2;
+  ActionsEnum              code    = 1 [json_name = "code"];
+  DeleteFileRequestPayload payload = 2 [json_name = "payload"];
+}
+
+message DeleteFileRequestPayload{
+  File file = 1 [json_name = "file"];
 }
 
 message DeleteFileResponse{
-  bool successful = 1;
-  Success success = 2;
-  Error error = 3;
+  string  id         = 1 [json_name = "id"];
+  bool    successful = 2 [json_name = "successful"];
+  Success success    = 3 [json_name = "success"];
+  Error   error      = 4 [json_name = "error"];
+}
+
+/*===================================*/
+
+message CreateSessionRequest{}
+
+message CreateSessionRequestPayload{}
+
+message CreateSessionResponse{
+  SuccessEnum code       = 1 [json_name = "code"];
+  string      session_id = 2 [json_name = "sessionID"];
 }
 
 /*===================================*/
 
 message DeleteSessionRequest{
-  ActionsEnum code = 1;
-  string session = 2;
+  ActionsEnum                 code    = 1 [json_name = "code"];
+  DeleteSessionRequestPayload payload = 2 [json_name = "payload"];
+}
+
+message DeleteSessionRequestPayload{
+  string session = 2 [json_name = "session"];
 }
 
 message DeleteSessionResponse{
-  bool successful = 1;
-  Success success = 2;
-  Error error = 3;
+  string  id         = 1 [json_name = "id"];
+  bool    successful = 2 [json_name = "successful"];
+  Success success    = 3 [json_name = "success"];
+  Error   error      = 4 [json_name = "error"];
 }
 
 /*===================================*/

@@ -8,19 +8,24 @@ import "codes/success.proto";
 import "google/protobuf/timestamp.proto";
 
 message Success{
-  SuccessEnum code = 1;
-  optional string status = 2;
+  SuccessEnum     code   = 1 [json_name = "code"];
+  optional string status = 2 [json_name = "status"];
 }
 
 message Error{
-  ErrorsEnum code = 1;
-  string error = 2;
+  ErrorsEnum code  = 1 [json_name = "code"];
+  string     error = 2 [json_name = "error"];
 }
 
 message File{
-  string name = 1;
-  google.protobuf.Timestamp created = 2;
-  int64 timesDownloaded = 3;
-  google.protobuf.Timestamp ttl = 4;
-  int64 size = 5;
+  string                      name              = 1 [json_name = "name"];
+  google.protobuf.Timestamp   created           = 2 [json_name = "created"];
+  int64                       times_downloaded  = 3 [json_name = "timesDownloaded"];
+  google.protobuf.Timestamp   ttl               = 4 [json_name = "ttl"];
+  int64                       size              = 5 [json_name = "size"];
+}
+
+message PanicResponse{
+  ErrorsEnum code     = 1 [json_name = "code"];
+  string     message  = 2 [json_name = "message"];
 }

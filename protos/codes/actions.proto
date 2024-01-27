@@ -11,7 +11,7 @@ extend google.protobuf.EnumValueOptions {
 
 enum ActionsEnum{
   HEALTH_CHECK         = 0 [(action_code) = "A0000"];
-  SESSION_ID           = 1 [(action_code) = "A0001"];
+  NEW_SESSION          = 1 [(action_code) = "A0001"];
 
   DOWNLOAD_VIDEO_AUDIO = 2 [(action_code) = "A1001"];
   DOWNLOAD_VIDEO       = 3 [(action_code) = "A1002"];
