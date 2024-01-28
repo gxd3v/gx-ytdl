@@ -15,8 +15,8 @@ enum ActionsEnum{
 
   DOWNLOAD_VIDEO_AUDIO = 2 [(action_code) = "A1001"];
   DOWNLOAD_VIDEO       = 3 [(action_code) = "A1002"];
-
   DOWNLOAD_AUDIO       = 4 [(action_code) = "A1003"];
+
   LIST_FILES           = 5 [(action_code) = "A2000"];
   SEND_FILE_TO_CLIENT  = 6 [(action_code) = "A2001"];
 

@@ -9,7 +9,7 @@ import "google/protobuf/timestamp.proto";
 
 message Success{
   SuccessEnum     code   = 1 [json_name = "code"];
-  optional string status = 2 [json_name = "status"];
+  string status = 2 [json_name = "status"];
 }
 
 message Error{
