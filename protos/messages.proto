@@ -3,19 +3,18 @@ syntax = "proto3";
 package protos;
 option go_package = "../protos";
 
-import "codes/actions.proto";
 import "codes/success.proto";
 import "global.proto";
 import "google/protobuf/any.proto";
 
 message DownloadRequest{
-  ActionsEnum            code    = 1 [json_name = "code"];
+  string                 code    = 1 [json_name = "code"];
   DownloadRequestPayload payload = 2 [json_name = "payload"];
 }
 
 message DownloadRequestPayload{
-  bool   audio = 1 [json_name = "audio"];
-  string url   = 2 [json_name = "url"];
+    bool   audio = 1 [json_name = "audio"];
+    string url   = 2 [json_name = "url"];
 }
 
 message DownloadResponse{
@@ -29,7 +28,7 @@ message DownloadResponse{
 /*===================================*/
 
 message CreateSessionFolderRequest{
-  ActionsEnum                       code    = 1 [json_name = "code"];
+  string                            code    = 1 [json_name = "code"];
   CreateSessionFolderRequestPayload payload = 2 [json_name = "payload"];
 }
 
@@ -48,7 +47,7 @@ message CreateSessionFolderResponse{
 /*===================================*/
 
 message ListFilesRequest{
-  ActionsEnum             code    = 1 [json_name = "code"];
+  string                  code    = 1 [json_name = "code"];
   ListFilesRequestPayload payload = 2 [json_name = "payload"];
 }
 
@@ -67,7 +66,7 @@ message ListFilesResponse{
 /*===================================*/
 
 message SendFileToClientRequest{
-  ActionsEnum                    code    = 1 [json_name = "code"];
+  string                         code    = 1 [json_name = "code"];
   SendFileToClientRequestPayload payload = 2 [json_name = "payload"];
 }
 
@@ -86,7 +85,7 @@ message SendFileToClientResponse{
 /*===================================*/
 
 message DeleteFileRequest{
-  ActionsEnum              code    = 1 [json_name = "code"];
+  string                   code    = 1 [json_name = "code"];
   DeleteFileRequestPayload payload = 2 [json_name = "payload"];
 }
 
@@ -115,7 +114,7 @@ message CreateSessionResponse{
 /*===================================*/
 
 message DeleteSessionRequest{
-  ActionsEnum                 code    = 1 [json_name = "code"];
+  string                      code    = 1 [json_name = "code"];
   DeleteSessionRequestPayload payload = 2 [json_name = "payload"];
 }
 
