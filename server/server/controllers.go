@@ -58,7 +58,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 	s.Logger.SetSessionID(s.SessionID)
 	_, err := s.CreateSessionFolder(ctx, &protos.CreateSessionFolderRequest{
-		Code: protos.ActionsEnum_NEW_SESSION,
+		Code: protos.ActionsEnum_NEW_SESSION.String(),
 		Payload: &protos.CreateSessionFolderRequestPayload{
 			Session: s.SessionID,
 		},
@@ -83,6 +83,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		}
 
 		s.Logger.Info("Got a message", base64.StdEncoding.EncodeToString(message))
+
 		messageActionCode := struct {
 			Code string `json:"code"`
 		}{}
@@ -93,16 +94,16 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		}
 
 		s.Logger.Info("Checking which action to take")
-		switch protos.ActionCodeToIndex(messageActionCode.Code) {
-		case protos.ActionsEnum_DOWNLOAD_AUDIO.String():
-			payload := &protos.DownloadRequestPayload{}
 
-			err = json.Unmarshal(message, &payload)
+		code := protos.ActionsEnum_value[messageActionCode.Code]
+
+		switch code {
+		case int32(protos.ActionsEnum_DOWNLOAD_AUDIO):
+			request := &protos.DownloadRequest{}
+
+			err = json.Unmarshal(message, &request)
 			if ok := s.checkMessageError(ctx, err); ok {
-				download, _ := s.Download(ctx, &protos.DownloadRequest{
-					Code:    protos.ActionsEnum_DOWNLOAD_AUDIO,
-					Payload: payload,
-				})
+				download, _ := s.Download(ctx, request)
 
 				s.SendMessage(ctx, download)
 				continue

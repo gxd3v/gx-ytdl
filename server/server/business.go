@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gx/youtubeDownloader/protos"
+	"net/url"
 	"os"
 	"os/exec"
 )
@@ -12,14 +13,26 @@ import (
 var _ Business = (*Server)(nil)
 
 func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) (*protos.DownloadResponse, error) {
+	parsedURL, err := url.Parse(request.Payload.GetUrl())
+	if err != nil {
+		return &protos.DownloadResponse{
+			Id:         uuid.NewString(),
+			Successful: false,
+			Error: &protos.Error{
+				Code:  protos.ErrorsEnum_FAILED_DOWNLOAD,
+				Error: "Invalid URL: " + err.Error(),
+			},
+		}, nil
+	}
+
 	cmd := exec.Command(s.Config.PythonBinary, s.Config.DownloaderPath)
-	cmd.Args = append(cmd.Args, "-u", request.Payload.GetUrl())
+	cmd.Args = append(cmd.Args, "-u", parsedURL.String())
 	cmd.Args = append(cmd.Args, "-op", fmt.Sprintf(s.Config.OutputPath, s.SessionID))
 	if request.Payload.GetAudio() {
 		cmd.Args = append(cmd.Args, "-a")
 	}
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return &protos.DownloadResponse{
 			Id:         uuid.NewString(),
@@ -36,15 +49,15 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) (*pro
 		Id:         uuid.NewString(),
 		Successful: true,
 		Success: &protos.Success{
-			Code: protos.SuccessEnum_VIDEO_DOWNLOADABLE,
+			Code:   protos.SuccessEnum_VIDEO_DOWNLOADABLE,
+			Status: "File is done downloading",
 		},
-		Data: "File is done downloading",
 	}, nil
 
 }
 
 func (s *Server) CreateSessionFolder(_ *gin.Context, request *protos.CreateSessionFolderRequest) (*protos.CreateSessionFolderResponse, error) {
-	s.Logger.Info(fmt.Sprintf("Creating folder %s to store downloads", request.Payload.GetSession()))
+	s.Logger.Info("Creating folder to store downloads")
 	s.Storage = fmt.Sprintf(s.Config.OutputPath, request.Payload.GetSession())
 	err := os.Mkdir(s.Storage, os.ModeAppend)
 	if err != nil {
