@@ -10,6 +10,8 @@ import (
 	c "github.com/gx/youtubeDownloader/constants"
 	"github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"net/http"
 )
 
@@ -84,9 +86,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		s.Logger.Info("Got a message", base64.StdEncoding.EncodeToString(message))
 
-		messageActionCode := struct {
-			Code string `json:"code"`
-		}{}
+		messageActionCode := protos.ActionCode{}
 
 		err = json.Unmarshal(message, &messageActionCode)
 		if ok := s.checkMessageError(ctx, err); !ok {
@@ -109,6 +109,21 @@ func (s *Server) StartListener(ctx *gin.Context) {
 				continue
 			}
 
+		case int32(protos.ActionsEnum_LIST_FILES):
+			files, _ := s.ListFiles(ctx)
+			s.SendMessage(ctx, files)
+			continue
+
+		case int32(protos.ActionsEnum_DELETE_FILE):
+			request := &protos.DeleteFileRequest{}
+
+			err = json.Unmarshal(message, &request)
+			if ok := s.checkMessageError(ctx, err); ok {
+				files, _ := s.DeleteFile(ctx, request)
+				s.SendMessage(ctx, files)
+				continue
+			}
+
 		//case c.CODE_DOWNLOAD_VIDEO_AUDIO:
 		//	s.Download(ctx, false, msg.Payload["url"].(string))
 		//	continue
@@ -117,10 +132,17 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		//	s.ListFiles(ctx)
 		//	continue
 		//
-		//case c.CODE_SEND_FILE_TO_CLIENT:
-		//	s.SendFileToClient(ctx, msg.Payload["name"].(string))
-		//	continue
-		//
+		case int32(protos.ActionsEnum_RETRIEVE_FILE):
+			request := &protos.SendFileToClientRequest{}
+
+			err = json.Unmarshal(message, &request)
+			if ok := s.checkMessageError(ctx, err); ok {
+				file, _ := s.SendFileToClient(ctx, request)
+
+				s.SendMessage(ctx, file)
+				continue
+			}
+
 		//case c.CODE_DELETE_FILE:
 		//	s.DeleteFile(ctx, msg.Payload["name"].(string))
 		//	continue
@@ -153,8 +175,12 @@ func (s *Server) checkMessageError(ctx *gin.Context, err error) bool {
 	return true
 }
 
-func (s *Server) SendMessage(ctx *gin.Context, message interface{}) {
-	out, err := json.Marshal(message)
+func (s *Server) SendMessage(ctx *gin.Context, message proto.Message) {
+	marshaller := protojson.MarshalOptions{
+		EmitDefaultValues: true,
+	}
+
+	out, err := marshaller.Marshal(message)
 	if err != nil {
 		status := http.StatusInternalServerError
 		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
@@ -165,32 +191,3 @@ func (s *Server) SendMessage(ctx *gin.Context, message interface{}) {
 		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
 	}
 }
-
-//func (s *Server) SendMessage(ctx *gin.Context, code, message string) {
-//	success := true
-//	if strings.Contains(code, c.CODE_ERROR_LETTER) {
-//		s.Logger.Error(fmt.Sprintf("ERROR: %s", message))
-//		success = false
-//	}
-//
-//	resp := &models.WebsocketServerResponse{
-//		Id:      uuid.New().String(),
-//		Success: success,
-//		Data: models.JSONBodyMessage{
-//			Code:    code,
-//			Message: message,
-//		},
-//	}
-//
-//	out, err := json.Marshal(resp)
-//	if err != nil {
-//		status := http.StatusInternalServerError
-//		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
-//	}
-//
-//	err = s.Ws.WriteMessage(websocket.TextMessage, out)
-//	if err != nil {
-//		status := http.StatusInternalServerError
-//		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
-//	}
-//}
