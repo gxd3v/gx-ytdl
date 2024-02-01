@@ -4,12 +4,13 @@ package protos;
 option go_package = "../protos";
 
 import "messages.proto";
+import "google/protobuf/empty.proto";
 
 service Server{
   rpc Download(DownloadRequest) returns (DownloadResponse);
   rpc CreateSessionFolder(CreateSessionFolderRequest) returns (CreateSessionFolderResponse);
-  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  rpc ListFiles(google.protobuf.Empty) returns (ListFilesResponse);
   rpc SendFileToClient(SendFileToClientRequest) returns (SendFileToClientResponse);
   rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
-  rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse);
+  rpc DeleteSession(google.protobuf.Empty) returns (DeleteSessionResponse);
 }

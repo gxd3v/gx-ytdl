@@ -18,7 +18,7 @@ enum ActionsEnum{
   DOWNLOAD_AUDIO       = 4 [(action_code) = "A1003"];
 
   LIST_FILES           = 5 [(action_code) = "A2000"];
-  SEND_FILE_TO_CLIENT  = 6 [(action_code) = "A2001"];
+  RETRIEVE_FILE        = 6 [(action_code) = "A2001"];
 
   DELETE_FILE          = 7 [(action_code) = "A3000"];
   DELETE_SESSION       = 8 [(action_code) = "A3001"];

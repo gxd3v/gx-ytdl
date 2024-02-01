@@ -46,15 +46,6 @@ message CreateSessionFolderResponse{
 
 /*===================================*/
 
-message ListFilesRequest{
-  string                  code    = 1 [json_name = "code"];
-  ListFilesRequestPayload payload = 2 [json_name = "payload"];
-}
-
-message ListFilesRequestPayload {
-  string session = 1 [json_name = "session"];
-}
-
 message ListFilesResponse{
   string   id         = 1 [json_name = "id"];
   bool     successful = 2 [json_name = "successful"];
@@ -94,10 +85,11 @@ message DeleteFileRequestPayload{
 }
 
 message DeleteFileResponse{
-  string  id         = 1 [json_name = "id"];
-  bool    successful = 2 [json_name = "successful"];
-  Success success    = 3 [json_name = "success"];
-  Error   error      = 4 [json_name = "error"];
+  string   id         = 1 [json_name = "id"];
+  bool     successful = 2 [json_name = "successful"];
+  Success  success    = 3 [json_name = "success"];
+  Error    error      = 4 [json_name = "error"];
+  repeated File files = 5 [json_name = "files"];
 }
 
 /*===================================*/

@@ -17,4 +17,6 @@ enum ErrorsEnum{
   FAILED_LISTING_FILES  = 4 [(error_code) = "E0004"];
   FAILED_DELETE_FILE    = 5 [(error_code) = "E0005"];
   FAILED_DELETE_SESSION = 6 [(error_code) = "E0006"];
+  NO_ITEMS_PRESENT      = 7 [(error_code) = "E0007"];
+  CATASTROPHIC_ERROR    = 8 [(error_code) = "E0008"];
 }
