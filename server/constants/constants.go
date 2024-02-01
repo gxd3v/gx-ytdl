@@ -1,9 +1,9 @@
 package constants
 
 const (
-	API_VERSION         = "v1"
-	SERVICE_PREFIX      = "YTDL"
-	SESSION_PARAMETER   = "sessionID"
-	CLIENT_DISCONNECTED = -1
-	FILE_TTL            = 259200
+	API_VERSION        = "v1"
+	ServicePrefix      = "YTDL"
+	SessionParameter   = "sessionID"
+	ClientDisconnected = -1
+	FileTtl            = 259200
 )

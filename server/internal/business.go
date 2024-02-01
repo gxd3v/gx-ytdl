@@ -1,4 +1,4 @@
-package server
+package internal
 
 import (
 	"fmt"
@@ -17,8 +17,10 @@ import (
 var _ Business = (*Server)(nil)
 
 func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) (*protos.DownloadResponse, error) {
+	s.Logger.Info("Trying to parse the URL")
 	url, err := util.ParseURL(request.Payload.GetUrl())
 	if err != nil {
+		s.Logger.Error("URL was not valid", err.Error())
 		return &protos.DownloadResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
@@ -29,6 +31,7 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) (*pro
 		}, nil
 	}
 
+	s.Logger.Info("Invoking external downloader")
 	cmd := exec.Command(s.Config.PythonBinary, s.Config.DownloaderPath)
 	cmd.Args = append(cmd.Args, "-u", url.String())
 	cmd.Args = append(cmd.Args, "-op", fmt.Sprintf(s.Config.OutputPath, s.SessionID))
@@ -38,6 +41,7 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) (*pro
 
 	err = cmd.Run()
 	if err != nil {
+		s.Logger.Error("Failed to run external downloader", err.Error())
 		return &protos.DownloadResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
@@ -49,6 +53,7 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) (*pro
 	}
 
 	_ = cmd.Wait()
+	s.Logger.Info("Download successfully finished")
 	return &protos.DownloadResponse{
 		Id:         uuid.NewString(),
 		Successful: true,
@@ -65,6 +70,7 @@ func (s *Server) CreateSessionFolder(_ *gin.Context, request *protos.CreateSessi
 	s.Storage = fmt.Sprintf(s.Config.OutputPath, request.Payload.GetSession())
 	err := os.Mkdir(s.Storage, os.ModeAppend)
 	if err != nil {
+		s.Logger.Error("Failed to create a session folder")
 		return &protos.CreateSessionFolderResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
@@ -89,7 +95,7 @@ func (s *Server) CreateSessionFolder(_ *gin.Context, request *protos.CreateSessi
 
 func (s *Server) ListFiles(ctx *gin.Context) (*protos.ListFilesResponse, error) {
 	if files, err := os.ReadDir(fmt.Sprintf(s.Config.OutputPath, s.SessionID)); err != nil {
-		s.Logger.Error(c.TEXT_ERROR_FAILED_LISTING_FILES, err.Error())
+		s.Logger.Error("Failed to read the directory", err.Error())
 		return &protos.ListFilesResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
@@ -110,6 +116,7 @@ func (s *Server) ListFiles(ctx *gin.Context) (*protos.ListFilesResponse, error) 
 				},
 			})
 		} else {
+			s.Logger.Info("Sending list of files to client")
 			returningFiles := make([]*protos.File, 0)
 
 			for _, file := range files {
@@ -118,7 +125,7 @@ func (s *Server) ListFiles(ctx *gin.Context) (*protos.ListFilesResponse, error) 
 					Name:            file.Name(),
 					Created:         timestamppb.New(info.ModTime()),
 					TimesDownloaded: 0,
-					Ttl:             timestamppb.New(info.ModTime().Add(time.Second * c.FILE_TTL)),
+					Ttl:             timestamppb.New(info.ModTime().Add(time.Second * c.FileTtl)),
 					Size:            info.Size(),
 				})
 			}
@@ -162,6 +169,7 @@ func (s *Server) SendFileToClient(_ *gin.Context, request *protos.SendFileToClie
 func (s *Server) DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest) (*protos.DeleteFileResponse, error) {
 	err := os.Remove(path.Join(fmt.Sprintf(s.Config.OutputPath, s.SessionID), request.Payload.File.Name))
 	if err != nil {
+		s.Logger.Error("Failed to delete a file", err.Error())
 		return &protos.DeleteFileResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
@@ -171,8 +179,10 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest)
 			},
 		}, nil
 	} else {
+		s.Logger.Info("File was deleted successfully")
 		files, err := s.ListFiles(ctx)
 		if err != nil {
+			s.Logger.Error("Couldn't list files")
 			return &protos.DeleteFileResponse{
 				Id:         uuid.NewString(),
 				Successful: false,
@@ -182,6 +192,7 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest)
 				},
 			}, nil
 		} else {
+			s.Logger.Info("Sending new list of files to client")
 			return &protos.DeleteFileResponse{
 				Id:         uuid.NewString(),
 				Successful: true,
@@ -198,6 +209,7 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest)
 func (s *Server) DeleteSession(_ *gin.Context) (*protos.DeleteSessionResponse, error) {
 	err := os.Remove(fmt.Sprintf(s.Config.OutputPath, s.SessionID))
 	if err != nil {
+		s.Logger.Error("Failed to delete session")
 		return &protos.DeleteSessionResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
@@ -210,6 +222,7 @@ func (s *Server) DeleteSession(_ *gin.Context) (*protos.DeleteSessionResponse, e
 		err = s.Ws.Close()
 		s.SessionID = ""
 
+		s.Logger.Info("Session deleted, disconnecting client from the internal")
 		return &protos.DeleteSessionResponse{
 			Id:         uuid.NewString(),
 			Successful: true,

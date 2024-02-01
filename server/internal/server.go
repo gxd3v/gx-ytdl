@@ -1,4 +1,4 @@
-package server
+package internal
 
 import (
 	"fmt"
@@ -21,9 +21,9 @@ func (s *Server) Host() {
 		s.Logger.Info("Setting routes")
 		s.SetupRoutes()
 
-		s.Logger.Info("Running the server")
+		s.Logger.Info("Running the internal")
 		if err := s.Router.Run(); err != nil {
-			s.Logger.Info(fmt.Sprintf("Failed to start server for this reason: %v", err.Error()))
+			s.Logger.Info(fmt.Sprintf("Failed to start internal for this reason: %v", err.Error()))
 			return
 		}
 	}

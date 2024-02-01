@@ -1,4 +1,4 @@
-package server
+package internal
 
 import (
 	"encoding/base64"
@@ -25,14 +25,14 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 	ws, err := upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {
 		status := http.StatusInternalServerError
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_UPGRADE_FAILED))
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "Failed to upgrade connection to websocket"))
 	}
 
 	s.Logger.Info("Connection upgraded")
 	s.Ws = ws
 
 	s.Logger.Info("Checking for connection reopening")
-	s.SessionID = ctx.Param(c.SESSION_PARAMETER)
+	s.SessionID = ctx.Param(c.SessionParameter)
 
 	s.Logger.Info("Listening for codes")
 	s.StartListener(ctx)
@@ -43,7 +43,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		if msg := recover(); msg != nil {
 			s.SendMessage(ctx, &protos.PanicResponse{
 				Code:    protos.ErrorsEnum_MALFORMED_MESSAGE,
-				Message: fmt.Sprintf("%s\n%+v", c.TEXT_ERROR_MALFORMED_MESSAGE, msg),
+				Message: fmt.Sprintf("%s\n%+v", "Message was malformed", msg),
 			})
 			s.StartListener(ctx)
 		}
@@ -75,7 +75,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 	for {
 		msgType, message, err := s.Ws.ReadMessage()
 		if err != nil {
-			if msgType == c.CLIENT_DISCONNECTED {
+			if msgType == c.ClientDisconnected {
 				s.Logger.Warning(fmt.Sprintf("Connection closed on client: %v - %v", s.SessionID, err.Error()))
 				_ = s.Ws.Close()
 				break
@@ -99,6 +99,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		switch code {
 		case int32(protos.ActionsEnum_DOWNLOAD_AUDIO):
+			s.Logger.Info("Starting audio download")
 			request := &protos.DownloadRequest{}
 
 			err = json.Unmarshal(message, &request)
@@ -110,11 +111,13 @@ func (s *Server) StartListener(ctx *gin.Context) {
 			}
 
 		case int32(protos.ActionsEnum_LIST_FILES):
+			s.Logger.Info("Listing files")
 			files, _ := s.ListFiles(ctx)
 			s.SendMessage(ctx, files)
 			continue
 
 		case int32(protos.ActionsEnum_DELETE_FILE):
+			s.Logger.Info("Deleting a file")
 			request := &protos.DeleteFileRequest{}
 
 			err = json.Unmarshal(message, &request)
@@ -124,15 +127,8 @@ func (s *Server) StartListener(ctx *gin.Context) {
 				continue
 			}
 
-		//case c.CODE_DOWNLOAD_VIDEO_AUDIO:
-		//	s.Download(ctx, false, msg.Payload["url"].(string))
-		//	continue
-		//
-		//case c.CODE_LIST_FILES:
-		//	s.ListFiles(ctx)
-		//	continue
-		//
 		case int32(protos.ActionsEnum_RETRIEVE_FILE):
+			s.Logger.Info("Sending a file to a client")
 			request := &protos.SendFileToClientRequest{}
 
 			err = json.Unmarshal(message, &request)
@@ -143,18 +139,11 @@ func (s *Server) StartListener(ctx *gin.Context) {
 				continue
 			}
 
-		//case c.CODE_DELETE_FILE:
-		//	s.DeleteFile(ctx, msg.Payload["name"].(string))
-		//	continue
-		//
-		//case c.CODE_DELETE_SESSION:
-		//	s.DeleteSession(ctx)
-		//	continue
-
 		default:
+			s.Logger.Info("Message didn't have a known code")
 			s.SendMessage(ctx, &protos.PanicResponse{
 				Code:    protos.ErrorsEnum_NOT_RECOGNIZED,
-				Message: fmt.Sprintf(c.TEXT_ERROR_CODE_NOT_RECOGNIZED, messageActionCode.Code),
+				Message: fmt.Sprintf("The code %v sent was not recognized", messageActionCode.Code),
 			})
 			continue
 		}
@@ -164,10 +153,10 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 func (s *Server) checkMessageError(ctx *gin.Context, err error) bool {
 	if err != nil {
-		s.Logger.Info("Message was malformed", err.Error())
+		s.Logger.Error("Message was malformed", err.Error())
 		s.SendMessage(ctx, &protos.PanicResponse{
 			Code:    protos.ErrorsEnum_MALFORMED_MESSAGE,
-			Message: c.TEXT_ERROR_MALFORMED_MESSAGE,
+			Message: "Message was malformed",
 		})
 		return false
 	}
@@ -183,11 +172,11 @@ func (s *Server) SendMessage(ctx *gin.Context, message proto.Message) {
 	out, err := marshaller.Marshal(message)
 	if err != nil {
 		status := http.StatusInternalServerError
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the internal failed to be parsed"))
 	}
 
 	if err = s.Ws.WriteMessage(websocket.TextMessage, out); err != nil {
 		status := http.StatusInternalServerError
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), c.TEXT_ERROR_SERVER_RESPONSE_FAILED))
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the internal failed to be parsed"))
 	}
 }

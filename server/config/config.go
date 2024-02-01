@@ -48,6 +48,6 @@ func (config *Config) Get() (*Config, error) {
 }
 
 func (config *Config) envString(val string) string {
-	config.ServicePrefix = constants.SERVICE_PREFIX
+	config.ServicePrefix = constants.ServicePrefix
 	return fmt.Sprintf("GX-%s-%s", config.ServicePrefix, val)
 }

@@ -2,17 +2,17 @@ package main
 
 import (
 	"github.com/gx/youtubeDownloader/database"
+	"github.com/gx/youtubeDownloader/internal"
 	"github.com/gx/youtubeDownloader/log"
-	"github.com/gx/youtubeDownloader/server"
 )
 
 func main() {
-	srv := server.Server{}
+	srv := internal.Server{}
 	db := &database.DB{}
 	logger := &log.Log{}
 
 	logger.Setup()
-	logger.Info("Starting server")
+	logger.Info("Starting internal")
 
 	srv.Logger = logger
 	srv.Database = db

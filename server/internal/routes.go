@@ -1,4 +1,4 @@
-package server
+package internal
 
 import (
 	"fmt"
@@ -7,5 +7,5 @@ import (
 
 func (s *Server) SetupRoutes() {
 	s.Router.GET(fmt.Sprintf("%s", s.Config.ConnectionRoute), s.UpgradeConnection)
-	s.Router.GET(fmt.Sprintf("%s/:%s", s.Config.ConnectionRoute, c.SESSION_PARAMETER), s.UpgradeConnection)
+	s.Router.GET(fmt.Sprintf("%s/:%s", s.Config.ConnectionRoute, c.SessionParameter), s.UpgradeConnection)
 }
