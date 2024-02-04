@@ -11,12 +11,12 @@ import (
 
 type Business interface {
 	UpgradeConnection(ctx *gin.Context)
-	Download(ctx *gin.Context, request *protos.DownloadRequest) (*protos.DownloadResponse, error)
-	CreateSessionFolder(ctx *gin.Context, request *protos.CreateSessionFolderRequest) (*protos.CreateSessionFolderResponse, error)
-	ListFiles(ctx *gin.Context) (*protos.ListFilesResponse, error)
-	SendFileToClient(ctx *gin.Context, request *protos.SendFileToClientRequest) (*protos.SendFileToClientResponse, error)
-	DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest) (*protos.DeleteFileResponse, error)
-	DeleteSession(ctx *gin.Context) (*protos.DeleteSessionResponse, error)
+	Download(ctx *gin.Context, request *protos.DownloadRequest) *protos.DownloadResponse
+	CreateSessionFolder(ctx *gin.Context, request *protos.CreateSessionFolderRequest) *protos.CreateSessionFolderResponse
+	ListFiles(ctx *gin.Context) *protos.ListFilesResponse
+	SendFileToClient(ctx *gin.Context, request *protos.SendFileToClientRequest) *protos.SendFileToClientResponse
+	DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest) *protos.DeleteFileResponse
+	DeleteSession(ctx *gin.Context) *protos.DeleteSessionResponse
 }
 
 type Server struct {
