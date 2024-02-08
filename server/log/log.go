@@ -28,7 +28,7 @@ func (l *Log) Setup() {
 }
 
 func (l *Log) Info(message string, args ...interface{}) {
-	defer l.StoreLog()
+	defer l.Buffer.Reset()
 	_, file, line, _ := runtime.Caller(1)
 	location := l.callerLocation(file, line)
 	log.Info().Interface("session", l.SessionID).Interface("arguments", args).Str("caller", location).Msg(message)
@@ -36,7 +36,7 @@ func (l *Log) Info(message string, args ...interface{}) {
 }
 
 func (l *Log) Error(message string, args ...interface{}) {
-	defer l.StoreLog()
+	defer l.Buffer.Reset()
 	_, file, line, _ := runtime.Caller(1)
 	location := l.callerLocation(file, line)
 	log.Error().Interface("arguments", args).Str("caller", location).Msg(message)
@@ -44,7 +44,7 @@ func (l *Log) Error(message string, args ...interface{}) {
 }
 
 func (l *Log) Warning(message string, args ...interface{}) {
-	defer l.StoreLog()
+	defer l.Buffer.Reset()
 	_, file, line, _ := runtime.Caller(1)
 	location := l.callerLocation(file, line)
 	log.Warn().Interface("arguments", args).Str("caller", location).Msg(message)
@@ -52,7 +52,7 @@ func (l *Log) Warning(message string, args ...interface{}) {
 }
 
 func (l *Log) Debug(message string, args ...interface{}) {
-	defer l.StoreLog()
+	defer l.Buffer.Reset()
 	_, file, line, _ := runtime.Caller(1)
 	location := l.callerLocation(file, line)
 	log.Debug().Interface("arguments", args).Str("caller", location).Msg(message)

@@ -1,10 +1,11 @@
-package internal
+package server
 
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	c "github.com/gx/youtubeDownloader/constants"
+	db "github.com/gx/youtubeDownloader/database"
 	"github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -17,6 +18,11 @@ import (
 var _ Business = (*Server)(nil)
 
 func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *protos.DownloadResponse {
+	table := db.TableName()
+	transaction := s.Database.Transactional(table)
+
+	defer func() { _ = transaction.Commit() }()
+
 	s.Logger.Info("Trying to parse the URL")
 	url, err := util.ParseURL(request.Payload.GetUrl())
 	if err != nil {
@@ -31,10 +37,12 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 		}
 	}
 
+	outputPath := fmt.Sprintf(s.Config.OutputPath, s.SessionID)
+
 	s.Logger.Info("Invoking external downloader")
 	cmd := exec.Command(s.Config.PythonBinary, s.Config.DownloaderPath)
 	cmd.Args = append(cmd.Args, "-u", url.String())
-	cmd.Args = append(cmd.Args, "-op", fmt.Sprintf(s.Config.OutputPath, s.SessionID))
+	cmd.Args = append(cmd.Args, "-op", outputPath)
 	if request.Payload.GetAudio() {
 		cmd.Args = append(cmd.Args, "-a")
 	}
@@ -53,7 +61,28 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 	}
 
 	_ = cmd.Wait()
+
 	s.Logger.Info("Download successfully finished")
+
+	//files := s.ListFiles(ctx)
+	ytdl := db.Ytdl{
+		Id:        uuid.NewString(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		CreatedBy: "admin",
+		Url:       url.String(),
+		StorePath: outputPath,
+		SessionId: s.SessionID,
+		Ttl:       c.FileTtl,
+		Active:    true,
+		FileSize:  0,
+	}
+
+	err = transaction.Insert(&ytdl, table)
+	if err != nil {
+		_ = transaction.Rollback()
+	}
+
 	return &protos.DownloadResponse{
 		Id:         uuid.NewString(),
 		Successful: true,
@@ -62,7 +91,6 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 			Status: "File is done downloading",
 		},
 	}
-
 }
 
 func (s *Server) CreateSessionFolder(_ *gin.Context, request *protos.CreateSessionFolderRequest) *protos.CreateSessionFolderResponse {
@@ -222,7 +250,7 @@ func (s *Server) DeleteSession(_ *gin.Context) *protos.DeleteSessionResponse {
 		err = s.Ws.Close()
 		s.SessionID = ""
 
-		s.Logger.Info("Session deleted, disconnecting client from the internal")
+		s.Logger.Info("Session deleted, disconnecting client from the server")
 		return &protos.DeleteSessionResponse{
 			Id:         uuid.NewString(),
 			Successful: true,

@@ -5,7 +5,6 @@ type Config struct {
 	ServiceID       string `json:"serviceID,omitempty"`
 	ConnectionRoute string `json:"routeConnect,omitempty"`
 
-	Port     int    `json:"port,omitempty"`
 	Database string `json:"database,omitempty"`
 
 	PythonBinary   string `json:"pythonBinary,omitempty"`

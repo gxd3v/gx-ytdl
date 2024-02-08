@@ -10,11 +10,6 @@ type JSONBodyMessage struct {
 	Message string `json:"message"`
 }
 
-//type WebsocketMessage struct {
-//	Code    string                 `json:"code"`
-//	Payload map[string]interface{} `json:"payload"`
-//}
-
 type WebsocketMessage struct {
 	Code protos.ActionsEnum `json:"code"`
 }

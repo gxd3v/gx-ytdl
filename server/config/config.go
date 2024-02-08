@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/gx/youtubeDownloader/constants"
@@ -23,7 +24,11 @@ func (config *Config) Get() (*Config, error) {
 	if value, ok := os.LookupEnv(config.envString("DATABASE")); !ok {
 		return nil, errors.New("no database address found in env variables")
 	} else {
-		config.Database = value
+		decodeString, err := base64.StdEncoding.DecodeString(value)
+		if err != nil {
+			return nil, err
+		}
+		config.Database = string(decodeString)
 	}
 
 	if value, ok := os.LookupEnv(config.envString("PYTHON-BINARY")); !ok {

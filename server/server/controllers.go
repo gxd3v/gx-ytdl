@@ -1,4 +1,4 @@
-package internal
+package server
 
 import (
 	"encoding/base64"
@@ -59,18 +59,12 @@ func (s *Server) StartListener(ctx *gin.Context) {
 	}
 
 	s.Logger.SetSessionID(s.SessionID)
-	_, err := s.CreateSessionFolder(ctx, &protos.CreateSessionFolderRequest{
+	s.CreateSessionFolder(ctx, &protos.CreateSessionFolderRequest{
 		Code: protos.ActionsEnum_NEW_SESSION.String(),
 		Payload: &protos.CreateSessionFolderRequestPayload{
 			Session: s.SessionID,
 		},
 	})
-	if err != nil {
-		s.SendMessage(ctx, &protos.PanicResponse{
-			Code:    protos.ErrorsEnum_FOLDER_ALREADY_EXISTS,
-			Message: err.Error(),
-		})
-	}
 
 	for {
 		msgType, message, err := s.Ws.ReadMessage()
@@ -104,7 +98,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 			err = json.Unmarshal(message, &request)
 			if ok := s.checkMessageError(ctx, err); ok {
-				download, _ := s.Download(ctx, request)
+				download := s.Download(ctx, request)
 
 				s.SendMessage(ctx, download)
 				continue
@@ -112,7 +106,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		case int32(protos.ActionsEnum_LIST_FILES):
 			s.Logger.Info("Listing files")
-			files, _ := s.ListFiles(ctx)
+			files := s.ListFiles(ctx)
 			s.SendMessage(ctx, files)
 			continue
 
@@ -122,7 +116,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 			err = json.Unmarshal(message, &request)
 			if ok := s.checkMessageError(ctx, err); ok {
-				files, _ := s.DeleteFile(ctx, request)
+				files := s.DeleteFile(ctx, request)
 				s.SendMessage(ctx, files)
 				continue
 			}
@@ -133,7 +127,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 			err = json.Unmarshal(message, &request)
 			if ok := s.checkMessageError(ctx, err); ok {
-				file, _ := s.SendFileToClient(ctx, request)
+				file := s.SendFileToClient(ctx, request)
 
 				s.SendMessage(ctx, file)
 				continue
@@ -172,11 +166,11 @@ func (s *Server) SendMessage(ctx *gin.Context, message proto.Message) {
 	out, err := marshaller.Marshal(message)
 	if err != nil {
 		status := http.StatusInternalServerError
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the internal failed to be parsed"))
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
 	}
 
 	if err = s.Ws.WriteMessage(websocket.TextMessage, out); err != nil {
 		status := http.StatusInternalServerError
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the internal failed to be parsed"))
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
 	}
 }
