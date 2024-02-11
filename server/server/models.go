@@ -26,7 +26,7 @@ type Server struct {
 	Ws        *websocket.Conn
 	SessionID string `json:"sessionID,omitempty"`
 	Storage   string `json:"storage,omitempty"`
-	Database  *database.DB
+	Database  *database.Database
 }
 
 type Route struct {

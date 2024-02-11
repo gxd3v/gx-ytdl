@@ -18,9 +18,7 @@ import (
 var _ Business = (*Server)(nil)
 
 func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *protos.DownloadResponse {
-	table := db.TableName()
-	transaction := s.Database.Transactional(table)
-
+	transaction := s.Database.Transactional()
 	defer func() { _ = transaction.Commit() }()
 
 	s.Logger.Info("Trying to parse the URL")
@@ -66,10 +64,12 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 
 	//files := s.ListFiles(ctx)
 	ytdl := db.Ytdl{
-		Id:        uuid.NewString(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		CreatedBy: "admin",
+		BaseModel: db.BaseModel{
+			Id:        uuid.NewString(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			CreatedBy: "admin",
+		},
 		Url:       url.String(),
 		StorePath: outputPath,
 		SessionId: s.SessionID,
@@ -78,7 +78,7 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 		FileSize:  0,
 	}
 
-	err = transaction.Insert(&ytdl, table)
+	err = transaction.Insert(&ytdl)
 	if err != nil {
 		_ = transaction.Rollback()
 	}

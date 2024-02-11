@@ -8,14 +8,21 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	c "github.com/gx/youtubeDownloader/constants"
+	"github.com/gx/youtubeDownloader/database"
 	"github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"net/http"
+	"strings"
 )
 
 func (s *Server) UpgradeConnection(ctx *gin.Context) {
+	if s.Banned(ctx) {
+		status := http.StatusUnauthorized
+		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "You are banned from using this service"))
+	}
+
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -173,4 +180,18 @@ func (s *Server) SendMessage(ctx *gin.Context, message proto.Message) {
 		status := http.StatusInternalServerError
 		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
 	}
+}
+
+func (s *Server) Banned(ctx *gin.Context) bool {
+	remote := ctx.Request.RemoteAddr
+	if strings.Contains(remote, ":") {
+		remote = strings.Split(remote, ":")[0]
+	}
+	bannedIP := &database.BannedIP{}
+	err := s.Database.GetByField("ip", remote).Main.Scan(bannedIP).Error
+	if err != nil || bannedIP == nil {
+		return false
+	}
+
+	return true
 }

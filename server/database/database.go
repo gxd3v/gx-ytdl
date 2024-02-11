@@ -1,14 +1,13 @@
 package database
 
 import (
-	"errors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-var _ Database = (*DB)(nil)
+var _ database = (*Database)(nil)
 
-func (db *DB) Connect(conn, table string) *DB {
+func (db *Database) Connect(conn string) *Database {
 
 	gormDB, err := gorm.Open(postgres.Open(conn), &gorm.Config{})
 	if err != nil {
@@ -20,44 +19,54 @@ func (db *DB) Connect(conn, table string) *DB {
 	return db
 }
 
-func (db *DB) Transactional(table string) *DB {
-	db.Main = db.Main.Table(table).Begin()
+func (db *Database) Transactional() *Database {
+	db.Main = db.Main.Begin()
 	return db
 }
 
-func (db *DB) Insert(data interface{}, table string) error {
-	return db.Main.Table(table).Create(data).Error
-}
-
-func (db *DB) Delete(identifier string, data interface{}, table string) error {
-	return db.Main.Table(table).Where("id = ?", identifier).Delete(&data).Error
-}
-
-func (db *DB) GetAll(table string) ([]interface{}, error) {
-	var out []interface{}
-	err := db.Main.Table(table).Find(&out).Error
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (db *DB) Get(identifier string, table string) (*interface{}, error) {
-	data, ok := db.Main.Table(table).Get(identifier)
-	if !ok {
-		return nil, errors.New("failed to get record")
-	}
-	return &data, nil
-}
-
-func (db *DB) Update(identifier string, data interface{}, table string) error {
-	return db.Main.Table(table).Where("id = ?", identifier).Updates(&data).Error
-}
-
-func (db *DB) Commit() error {
+func (db *Database) Commit() error {
 	return db.Main.Commit().Error
 }
 
-func (db *DB) Rollback() error {
+func (db *Database) Rollback() error {
 	return db.Main.Rollback().Error
+}
+
+func (db *Database) Insert(model ...interface{}) error {
+	for _, m := range model {
+		err := db.Main.Create(m).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (db *Database) Delete(model ...interface{}) error {
+	for _, m := range model {
+		err := db.Main.Delete(m).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (db *Database) Get(id string) *Database {
+	db.Main = db.Main.Where("id = ?", id)
+	return db
+}
+
+func (db *Database) GetByField(field, value string) *Database {
+	db.Main = db.Main.Where("? = ?", field, value)
+	return db
+}
+
+func (db *Database) List() []*interface{} {
+	var data []*interface{}
+	db.Main.Find(&data)
+
+	return data
 }

@@ -5,16 +5,20 @@ import (
 	"time"
 )
 
-type DB struct {
+type Database struct {
 	Main *gorm.DB
 }
 
-type Ytdl struct {
+type BaseModel struct {
 	Id        string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt time.Time
 	CreatedBy string
+}
+
+type Ytdl struct {
+	BaseModel
 	Url       string
 	StorePath string
 	SessionId string
@@ -23,39 +27,27 @@ type Ytdl struct {
 	FileSize  int
 }
 
-type Log struct {
-	Id        string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt time.Time
-	CreatedBy string
-	Message   string
-	Arguments []interface{}
-	Session   string
-	Service   string
-	Type      string
+type BannedIP struct {
+	BaseModel
+	Ip string
 }
 
-func LogTableName() string {
-	return "logs"
+func (BannedIP) TableName() string {
+	return "banned_ips"
 }
 
-func TableName() string {
+func (Ytdl) TableName() string {
 	return "ytdl"
 }
 
-func ServiceTableName() string {
-	return "services"
-}
-
-type Database interface {
-	Connect(conn, table string) *DB
-	Transactional(table string) *DB
-	Insert(data interface{}, table string) error
-	Delete(identifier string, data interface{}, table string) error
-	GetAll(table string) ([]interface{}, error)
-	Get(identifier string, table string) (*interface{}, error)
-	Update(identifier string, data interface{}, table string) error
+type database interface {
+	Connect(conn string) *Database
+	Transactional() *Database
 	Commit() error
 	Rollback() error
+	Insert(model ...interface{}) error
+	Delete(model ...interface{}) error
+	Get(id string) *Database
+	GetByField(field, value string) *Database
+	List() []*interface{}
 }
