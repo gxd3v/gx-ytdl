@@ -9,16 +9,20 @@ type Database struct {
 	Main *gorm.DB
 }
 
-type BaseModel struct {
+//type BaseModel struct {
+//	Id        string
+//	CreatedAt time.Time
+//	UpdatedAt time.Time
+//	DeletedAt time.Time
+//	CreatedBy string
+//}
+
+type Ytdl struct {
 	Id        string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt time.Time
 	CreatedBy string
-}
-
-type Ytdl struct {
-	BaseModel
 	Url       string
 	StorePath string
 	SessionId string
@@ -28,8 +32,16 @@ type Ytdl struct {
 }
 
 type BannedIP struct {
-	BaseModel
-	Ip string
+	Id        string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
+	CreatedBy string
+	Ip        string
+}
+
+type Tabler interface {
+	TableName() string
 }
 
 func (BannedIP) TableName() string {

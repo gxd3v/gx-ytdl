@@ -64,12 +64,12 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 
 	//files := s.ListFiles(ctx)
 	ytdl := db.Ytdl{
-		BaseModel: db.BaseModel{
-			Id:        uuid.NewString(),
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			CreatedBy: "admin",
-		},
+		//BaseModel: db.BaseModel{
+		Id:        uuid.NewString(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		CreatedBy: "admin",
+		//},
 		Url:       url.String(),
 		StorePath: outputPath,
 		SessionId: s.SessionID,

@@ -15,8 +15,8 @@ func (s *Server) Host() {
 	} else {
 		s.Config = co
 
-		s.Database = &database.DB{}
-		s.Database = s.Database.Connect(s.Config.Database, database.TableName())
+		s.Database = &database.Database{}
+		s.Database = s.Database.Connect(s.Config.Database)
 
 		s.Logger.Config = s.Config
 		s.Logger.Info("Connecting to the database")

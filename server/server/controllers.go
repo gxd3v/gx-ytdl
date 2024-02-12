@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	c "github.com/gx/youtubeDownloader/constants"
-	"github.com/gx/youtubeDownloader/database"
+	db "github.com/gx/youtubeDownloader/database"
 	"github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -187,11 +187,24 @@ func (s *Server) Banned(ctx *gin.Context) bool {
 	if strings.Contains(remote, ":") {
 		remote = strings.Split(remote, ":")[0]
 	}
-	bannedIP := &database.BannedIP{}
-	err := s.Database.GetByField("ip", remote).Main.Scan(bannedIP).Error
-	if err != nil || bannedIP == nil {
+
+	bannedIP := &db.BannedIP{}
+	data, err := s.Database.Model(bannedIP).GetByField("ip", remote).Scan(bannedIP)
+	if err != nil {
+		s.Logger.Error("Failed to scan for data", err.Error())
 		return false
 	}
 
-	return true
+	bip, ok := data.(db.BannedIP)
+	if !ok {
+		s.Logger.Error("Failed to cast data to expected model")
+		return false
+	}
+
+	if bip.Ip == remote {
+		s.Logger.Warning(fmt.Sprintf("IP %s tried to connect but it's banned from the service", remote))
+		return true
+	}
+
+	return false
 }
