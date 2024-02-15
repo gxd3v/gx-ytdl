@@ -5,8 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	c "github.com/gx/youtubeDownloader/constants"
-	db "github.com/gx/youtubeDownloader/database"
-	"github.com/gx/youtubeDownloader/protos"
+	pb "github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"os"
@@ -17,7 +16,7 @@ import (
 
 var _ Business = (*Server)(nil)
 
-func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *protos.DownloadResponse {
+func (s *Server) Download(_ *gin.Context, request *pb.DownloadRequest) *pb.DownloadResponse {
 	transaction := s.Database.Transactional()
 	defer func() { _ = transaction.Commit() }()
 
@@ -25,11 +24,11 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 	url, err := util.ParseURL(request.Payload.GetUrl())
 	if err != nil {
 		s.Logger.Error("URL was not valid", err.Error())
-		return &protos.DownloadResponse{
+		return &pb.DownloadResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
-			Error: &protos.Error{
-				Code:    protos.ErrorsEnum_FAILED_DOWNLOAD,
+			Error: &pb.Error{
+				Code:    pb.ErrorsEnum_FAILED_DOWNLOAD,
 				Message: "Invalid URL: " + err.Error(),
 			},
 		}
@@ -48,11 +47,11 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 	err = cmd.Run()
 	if err != nil {
 		s.Logger.Error("Failed to run external downloader", err.Error())
-		return &protos.DownloadResponse{
+		return &pb.DownloadResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
-			Error: &protos.Error{
-				Code:    protos.ErrorsEnum_FAILED_DOWNLOAD,
+			Error: &pb.Error{
+				Code:    pb.ErrorsEnum_FAILED_DOWNLOAD,
 				Message: err.Error(),
 			},
 		}
@@ -63,93 +62,80 @@ func (s *Server) Download(_ *gin.Context, request *protos.DownloadRequest) *prot
 	s.Logger.Info("Download successfully finished")
 
 	//files := s.ListFiles(ctx)
-	ytdl := db.Ytdl{
-		//BaseModel: db.BaseModel{
-		Id:        uuid.NewString(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		CreatedBy: "admin",
-		//},
-		Url:       url.String(),
-		StorePath: outputPath,
-		SessionId: s.SessionID,
-		Ttl:       c.FileTtl,
-		Active:    true,
-		FileSize:  0,
-	}
+	ytdl := s.Database.NewYTDL(url.String(), s.Storage, s.SessionID, 0)
 
-	err = transaction.Insert(&ytdl)
+	err = transaction.Insert(ytdl)
 	if err != nil {
 		_ = transaction.Rollback()
 	}
 
-	return &protos.DownloadResponse{
+	return &pb.DownloadResponse{
 		Id:         uuid.NewString(),
 		Successful: true,
-		Success: &protos.Success{
-			Code:   protos.SuccessEnum_VIDEO_DOWNLOADABLE,
+		Success: &pb.Success{
+			Code:   pb.SuccessEnum_VIDEO_DOWNLOADABLE,
 			Status: "File is done downloading",
 		},
 	}
 }
 
-func (s *Server) CreateSessionFolder(_ *gin.Context, request *protos.CreateSessionFolderRequest) *protos.CreateSessionFolderResponse {
+func (s *Server) CreateSessionFolder(_ *gin.Context, request *pb.CreateSessionFolderRequest) *pb.CreateSessionFolderResponse {
 	s.Logger.Info("Creating folder to store downloads")
 	s.Storage = fmt.Sprintf(s.Config.OutputPath, request.Payload.GetSession())
 	err := os.Mkdir(s.Storage, os.ModeAppend)
 	if err != nil {
 		s.Logger.Error("Failed to create a session folder")
-		return &protos.CreateSessionFolderResponse{
+		return &pb.CreateSessionFolderResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
-			Error: &protos.Error{
-				Code:    protos.ErrorsEnum_FOLDER_ALREADY_EXISTS,
+			Error: &pb.Error{
+				Code:    pb.ErrorsEnum_FOLDER_ALREADY_EXISTS,
 				Message: err.Error(),
 			},
 			Created: false,
 		}
 	}
 
-	return &protos.CreateSessionFolderResponse{
+	return &pb.CreateSessionFolderResponse{
 		Id:         uuid.NewString(),
 		Successful: true,
-		Success: &protos.Success{
-			Code:   protos.SuccessEnum_SESSION_FOLDER_CREATED,
+		Success: &pb.Success{
+			Code:   pb.SuccessEnum_SESSION_FOLDER_CREATED,
 			Status: "Session folder created",
 		},
 		Created: true,
 	}
 }
 
-func (s *Server) ListFiles(ctx *gin.Context) *protos.ListFilesResponse {
+func (s *Server) ListFiles(ctx *gin.Context) *pb.ListFilesResponse {
 	if files, err := os.ReadDir(fmt.Sprintf(s.Config.OutputPath, s.SessionID)); err != nil {
 		s.Logger.Error("Failed to read the directory", err.Error())
-		return &protos.ListFilesResponse{
+		return &pb.ListFilesResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
-			Error: &protos.Error{
-				Code:    protos.ErrorsEnum_FAILED_LISTING_FILES,
+			Error: &pb.Error{
+				Code:    pb.ErrorsEnum_FAILED_LISTING_FILES,
 				Message: "Error listing files: " + err.Error(),
 			},
 		}
 	} else {
 		if len(files) == 0 {
 			s.Logger.Warning("No files in folder to show")
-			s.SendMessage(ctx, &protos.ListFilesResponse{
+			s.SendMessage(ctx, &pb.ListFilesResponse{
 				Id:         uuid.NewString(),
 				Successful: false,
-				Error: &protos.Error{
-					Code:    protos.ErrorsEnum_NO_ITEMS_PRESENT,
+				Error: &pb.Error{
+					Code:    pb.ErrorsEnum_NO_ITEMS_PRESENT,
 					Message: err.Error(),
 				},
 			})
 		} else {
 			s.Logger.Info("Sending list of files to client")
-			returningFiles := make([]*protos.File, 0)
+			returningFiles := make([]*pb.File, 0)
 
 			for _, file := range files {
 				info, _ := file.Info()
-				returningFiles = append(returningFiles, &protos.File{
+				returningFiles = append(returningFiles, &pb.File{
 					Name:            file.Name(),
 					Created:         timestamppb.New(info.ModTime()),
 					TimesDownloaded: 0,
@@ -158,11 +144,11 @@ func (s *Server) ListFiles(ctx *gin.Context) *protos.ListFilesResponse {
 				})
 			}
 
-			return &protos.ListFilesResponse{
+			return &pb.ListFilesResponse{
 				Id:         uuid.NewString(),
 				Successful: true,
-				Success: &protos.Success{
-					Code:   protos.SuccessEnum_LISTED_FILES,
+				Success: &pb.Success{
+					Code:   pb.SuccessEnum_LISTED_FILES,
 					Status: "Files listed with success",
 				},
 				Files: returningFiles,
@@ -171,38 +157,38 @@ func (s *Server) ListFiles(ctx *gin.Context) *protos.ListFilesResponse {
 		}
 	}
 
-	return &protos.ListFilesResponse{
+	return &pb.ListFilesResponse{
 		Id:         uuid.NewString(),
 		Successful: false,
-		Error: &protos.Error{
-			Code:    protos.ErrorsEnum_CATASTROPHIC_ERROR,
+		Error: &pb.Error{
+			Code:    pb.ErrorsEnum_CATASTROPHIC_ERROR,
 			Message: "Something went terribly wrong",
 		},
 	}
 }
 
-func (s *Server) SendFileToClient(_ *gin.Context, request *protos.SendFileToClientRequest) *protos.SendFileToClientResponse {
+func (s *Server) SendFileToClient(_ *gin.Context, request *pb.SendFileToClientRequest) *pb.SendFileToClientResponse {
 	s.Logger.Info("Client requested file", request.Payload.File.Name)
-	return &protos.SendFileToClientResponse{
+	return &pb.SendFileToClientResponse{
 		Id:         uuid.NewString(),
 		Successful: true,
-		Success: &protos.Success{
-			Code:   protos.SuccessEnum_READY_TO_SEND,
+		Success: &pb.Success{
+			Code:   pb.SuccessEnum_READY_TO_SEND,
 			Status: "Retrieved file: " + request.Payload.GetFile().GetName(),
 		},
 		File: nil,
 	}
 }
 
-func (s *Server) DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest) *protos.DeleteFileResponse {
+func (s *Server) DeleteFile(ctx *gin.Context, request *pb.DeleteFileRequest) *pb.DeleteFileResponse {
 	err := os.Remove(path.Join(fmt.Sprintf(s.Config.OutputPath, s.SessionID), request.Payload.File.Name))
 	if err != nil {
 		s.Logger.Error("Failed to delete a file", err.Error())
-		return &protos.DeleteFileResponse{
+		return &pb.DeleteFileResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
-			Error: &protos.Error{
-				Code:    protos.ErrorsEnum_FAILED_DELETE_FILE,
+			Error: &pb.Error{
+				Code:    pb.ErrorsEnum_FAILED_DELETE_FILE,
 				Message: err.Error(),
 			},
 		}
@@ -211,21 +197,21 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest)
 		files := s.ListFiles(ctx)
 		if !files.Successful {
 			s.Logger.Error("Couldn't list files")
-			return &protos.DeleteFileResponse{
+			return &pb.DeleteFileResponse{
 				Id:         uuid.NewString(),
 				Successful: false,
-				Error: &protos.Error{
-					Code:    protos.ErrorsEnum_FAILED_LISTING_FILES,
+				Error: &pb.Error{
+					Code:    pb.ErrorsEnum_FAILED_LISTING_FILES,
 					Message: "Couldn't list files after deletion",
 				},
 			}
 		} else {
 			s.Logger.Info("Sending new list of files to client")
-			return &protos.DeleteFileResponse{
+			return &pb.DeleteFileResponse{
 				Id:         uuid.NewString(),
 				Successful: true,
-				Success: &protos.Success{
-					Code:   protos.SuccessEnum_DELETED_FILE,
+				Success: &pb.Success{
+					Code:   pb.SuccessEnum_DELETED_FILE,
 					Status: "File was deleted successfully",
 				},
 				Files: files.Files,
@@ -234,15 +220,15 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest)
 	}
 }
 
-func (s *Server) DeleteSession(_ *gin.Context) *protos.DeleteSessionResponse {
+func (s *Server) DeleteSession(_ *gin.Context) *pb.DeleteSessionResponse {
 	err := os.Remove(fmt.Sprintf(s.Config.OutputPath, s.SessionID))
 	if err != nil {
 		s.Logger.Error("Failed to delete session")
-		return &protos.DeleteSessionResponse{
+		return &pb.DeleteSessionResponse{
 			Id:         uuid.NewString(),
 			Successful: false,
-			Error: &protos.Error{
-				Code:    protos.ErrorsEnum_FAILED_DELETE_SESSION,
+			Error: &pb.Error{
+				Code:    pb.ErrorsEnum_FAILED_DELETE_SESSION,
 				Message: err.Error(),
 			},
 		}
@@ -251,11 +237,11 @@ func (s *Server) DeleteSession(_ *gin.Context) *protos.DeleteSessionResponse {
 		s.SessionID = ""
 
 		s.Logger.Info("Session deleted, disconnecting client from the server")
-		return &protos.DeleteSessionResponse{
+		return &pb.DeleteSessionResponse{
 			Id:         uuid.NewString(),
 			Successful: true,
-			Success: &protos.Success{
-				Code:   protos.SuccessEnum_SESSION_DELETE,
+			Success: &pb.Success{
+				Code:   pb.SuccessEnum_SESSION_DELETE,
 				Status: "Your session was deleted, forever.",
 			},
 		}

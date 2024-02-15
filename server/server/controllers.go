@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	c "github.com/gx/youtubeDownloader/constants"
 	db "github.com/gx/youtubeDownloader/database"
@@ -15,6 +14,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func (s *Server) UpgradeConnection(ctx *gin.Context) {
@@ -56,22 +56,15 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		}
 	}()
 
-	if s.SessionID == "" {
-		s.SessionID = uuid.New().String()
-		s.Logger.Info("Creating a new session", s.SessionID)
-		s.SendMessage(ctx, &protos.CreateSessionResponse{
-			Code:      protos.SuccessEnum_SESSION_ID,
-			SessionId: s.SessionID,
+	session := s.NewSession(ctx)
+	if session == nil {
+		s.SendMessage(ctx, &protos.PanicResponse{
+			Code:    protos.ErrorsEnum_CATASTROPHIC_ERROR,
+			Message: "Failed to start a new session",
 		})
+		_ = s.Ws.Close()
+		return
 	}
-
-	s.Logger.SetSessionID(s.SessionID)
-	s.CreateSessionFolder(ctx, &protos.CreateSessionFolderRequest{
-		Code: protos.ActionsEnum_NEW_SESSION.String(),
-		Payload: &protos.CreateSessionFolderRequestPayload{
-			Session: s.SessionID,
-		},
-	})
 
 	for {
 		msgType, message, err := s.Ws.ReadMessage()
@@ -150,6 +143,53 @@ func (s *Server) StartListener(ctx *gin.Context) {
 		}
 
 	}
+}
+
+func (s *Server) NewSession(ctx *gin.Context) *db.Session {
+	transaction := s.Database.Transactional()
+	defer func() { _ = transaction.Commit() }()
+
+	session := &db.Session{}
+	if s.SessionID != "" {
+		scan, err := s.Database.GetByField("session", s.SessionID).Scan(&session)
+		if err != nil {
+			session = s.Database.NewSession()
+		}
+
+		data, ok := scan.(db.Session)
+		if !ok {
+			session = s.Database.NewSession()
+		} else {
+			session = &data
+			session.UpdatedAt = time.Now()
+			session.LastLogin = time.Now()
+		}
+	} else {
+		session = s.Database.NewSession()
+		s.SessionID = session.Session
+		s.Logger.Info("Creating a new session", session.Session)
+	}
+
+	err := transaction.Insert(session)
+	if err != nil {
+		_ = transaction.Rollback()
+		return nil
+	}
+
+	s.SendMessage(ctx, &protos.CreateSessionResponse{
+		Code:      protos.SuccessEnum_SESSION_ID,
+		SessionId: session.Session,
+	})
+
+	s.Logger.SetSessionID(session.Session)
+	s.CreateSessionFolder(ctx, &protos.CreateSessionFolderRequest{
+		Code: protos.ActionsEnum_NEW_SESSION.String(),
+		Payload: &protos.CreateSessionFolderRequestPayload{
+			Session: session.Session,
+		},
+	})
+
+	return session
 }
 
 func (s *Server) checkMessageError(ctx *gin.Context, err error) bool {

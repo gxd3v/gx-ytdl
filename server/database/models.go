@@ -40,6 +40,16 @@ type BannedIP struct {
 	Ip        string
 }
 
+type Session struct {
+	Id        string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
+	CreatedBy string
+	Session   string
+	LastLogin time.Time
+}
+
 type Tabler interface {
 	TableName() string
 }
@@ -49,7 +59,11 @@ func (BannedIP) TableName() string {
 }
 
 func (Ytdl) TableName() string {
-	return "ytdl"
+	return "store"
+}
+
+func (Session) TableName() string {
+	return "sessions"
 }
 
 type database interface {
@@ -62,4 +76,9 @@ type database interface {
 	Get(id string) *Database
 	GetByField(field, value string) *Database
 	List() []*interface{}
+}
+
+type controllers interface {
+	NewSession() *Session
+	NewYTDL(url string, storePath string, sessionId string, fileSize int) *Ytdl
 }
