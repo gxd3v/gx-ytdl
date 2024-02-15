@@ -21,6 +21,7 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 	if s.Banned(ctx) {
 		status := http.StatusUnauthorized
 		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "You are banned from using this service"))
+		return
 	}
 
 	var upgrader = websocket.Upgrader{
@@ -156,13 +157,14 @@ func (s *Server) NewSession(ctx *gin.Context) *db.Session {
 			session = s.Database.NewSession()
 		}
 
-		data, ok := scan.(db.Session)
+		data, ok := scan.(*db.Session)
 		if !ok {
 			session = s.Database.NewSession()
 		} else {
-			session = &data
-			session.UpdatedAt = time.Now()
-			session.LastLogin = time.Now()
+			now := time.Now()
+			session = data
+			session.UpdatedAt = &now
+			session.LastLogin = &now
 		}
 	} else {
 		session = s.Database.NewSession()
@@ -235,7 +237,7 @@ func (s *Server) Banned(ctx *gin.Context) bool {
 		return false
 	}
 
-	bip, ok := data.(db.BannedIP)
+	bip, ok := data.(*db.BannedIP)
 	if !ok {
 		s.Logger.Error("Failed to cast data to expected model")
 		return false

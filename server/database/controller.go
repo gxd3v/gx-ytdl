@@ -9,21 +9,23 @@ import (
 var _ controllers = (*Database)(nil)
 
 func (db *Database) NewSession() *Session {
+	now := time.Now()
 	return &Session{
 		Id:        uuid.NewString(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: &now,
+		UpdatedAt: &now,
 		CreatedBy: "admin",
 		Session:   uuid.NewString(),
-		LastLogin: time.Now(),
+		LastLogin: &now,
 	}
 }
 
 func (db *Database) NewYTDL(url, storePath, sessionId string, fileSize int) *Ytdl {
+	now := time.Now()
 	return &Ytdl{
 		Id:        uuid.NewString(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: &now,
+		UpdatedAt: &now,
 		CreatedBy: "admin",
 		Url:       url,
 		StorePath: storePath,

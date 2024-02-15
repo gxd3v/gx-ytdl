@@ -21,7 +21,10 @@ func (db *Database) Connect(conn string) *Database {
 }
 
 func (db *Database) Transactional() *Database {
-	db.Main = db.Main.Begin()
+	if db.Back == nil {
+		db.Back = db.Main
+	}
+	db.Main = db.Back.Begin()
 	return db
 }
 
@@ -69,7 +72,10 @@ func (db *Database) List() []*interface{} {
 }
 
 func (db *Database) Model(model interface{}) *Database {
-	db.Main = db.Main.Model(model)
+	if db.Back == nil {
+		db.Back = db.Main
+	}
+	db.Main = db.Back.Model(model)
 	return db
 }
 

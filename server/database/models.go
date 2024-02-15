@@ -7,6 +7,7 @@ import (
 
 type Database struct {
 	Main *gorm.DB
+	Back *gorm.DB
 }
 
 //type BaseModel struct {
@@ -19,9 +20,9 @@ type Database struct {
 
 type Ytdl struct {
 	Id        string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt time.Time
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
+	DeletedAt *time.Time
 	CreatedBy string
 	Url       string
 	StorePath string
@@ -33,21 +34,21 @@ type Ytdl struct {
 
 type BannedIP struct {
 	Id        string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt time.Time
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
+	DeletedAt *time.Time
 	CreatedBy string
 	Ip        string
 }
 
 type Session struct {
 	Id        string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt time.Time
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
+	DeletedAt *time.Time
 	CreatedBy string
 	Session   string
-	LastLogin time.Time
+	LastLogin *time.Time
 }
 
 type Tabler interface {
