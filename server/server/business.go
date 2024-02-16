@@ -1,12 +1,13 @@
 package server
 
 import (
+	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	c "github.com/gx/youtubeDownloader/constants"
 	pb "github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"os"
 	"os/exec"
@@ -14,9 +15,7 @@ import (
 	"time"
 )
 
-var _ Business = (*Server)(nil)
-
-func (s *Server) Download(_ *gin.Context, request *pb.DownloadRequest) *pb.DownloadResponse {
+func (s *Server) Download(_ context.Context, request *pb.DownloadRequest) (*pb.DownloadResponse, error) {
 	transaction := s.Database.Transactional()
 	defer func() { _ = transaction.Commit() }()
 
@@ -31,7 +30,7 @@ func (s *Server) Download(_ *gin.Context, request *pb.DownloadRequest) *pb.Downl
 				Code:    pb.ErrorsEnum_FAILED_DOWNLOAD,
 				Message: "Invalid URL: " + err.Error(),
 			},
-		}
+		}, nil
 	}
 
 	outputPath := fmt.Sprintf(s.Config.OutputPath, s.SessionID)
@@ -54,7 +53,7 @@ func (s *Server) Download(_ *gin.Context, request *pb.DownloadRequest) *pb.Downl
 				Code:    pb.ErrorsEnum_FAILED_DOWNLOAD,
 				Message: err.Error(),
 			},
-		}
+		}, nil
 	}
 
 	_ = cmd.Wait()
@@ -76,10 +75,10 @@ func (s *Server) Download(_ *gin.Context, request *pb.DownloadRequest) *pb.Downl
 			Code:   pb.SuccessEnum_VIDEO_DOWNLOADABLE,
 			Status: "File is done downloading",
 		},
-	}
+	}, nil
 }
 
-func (s *Server) CreateSessionFolder(_ *gin.Context, request *pb.CreateSessionFolderRequest) *pb.CreateSessionFolderResponse {
+func (s *Server) CreateSessionFolder(_ context.Context, request *pb.CreateSessionFolderRequest) (*pb.CreateSessionFolderResponse, error) {
 	s.Logger.Info("Creating folder to store downloads")
 	s.Storage = fmt.Sprintf(s.Config.OutputPath, request.Payload.GetSession())
 	err := os.Mkdir(s.Storage, os.ModeAppend)
@@ -93,7 +92,7 @@ func (s *Server) CreateSessionFolder(_ *gin.Context, request *pb.CreateSessionFo
 				Message: err.Error(),
 			},
 			Created: false,
-		}
+		}, nil
 	}
 
 	return &pb.CreateSessionFolderResponse{
@@ -104,10 +103,10 @@ func (s *Server) CreateSessionFolder(_ *gin.Context, request *pb.CreateSessionFo
 			Status: "Session folder created",
 		},
 		Created: true,
-	}
+	}, nil
 }
 
-func (s *Server) ListFiles(ctx *gin.Context) *pb.ListFilesResponse {
+func (s *Server) ListFiles(ctx context.Context, _ *emptypb.Empty) (*pb.ListFilesResponse, error) {
 	if files, err := os.ReadDir(fmt.Sprintf(s.Config.OutputPath, s.SessionID)); err != nil {
 		s.Logger.Error("Failed to read the directory", err.Error())
 		return &pb.ListFilesResponse{
@@ -117,7 +116,7 @@ func (s *Server) ListFiles(ctx *gin.Context) *pb.ListFilesResponse {
 				Code:    pb.ErrorsEnum_FAILED_LISTING_FILES,
 				Message: "Error listing files: " + err.Error(),
 			},
-		}
+		}, nil
 	} else {
 		if len(files) == 0 {
 			s.Logger.Warning("No files in folder to show")
@@ -152,7 +151,7 @@ func (s *Server) ListFiles(ctx *gin.Context) *pb.ListFilesResponse {
 					Status: "Files listed with success",
 				},
 				Files: returningFiles,
-			}
+			}, nil
 
 		}
 	}
@@ -164,10 +163,10 @@ func (s *Server) ListFiles(ctx *gin.Context) *pb.ListFilesResponse {
 			Code:    pb.ErrorsEnum_CATASTROPHIC_ERROR,
 			Message: "Something went terribly wrong",
 		},
-	}
+	}, nil
 }
 
-func (s *Server) SendFileToClient(_ *gin.Context, request *pb.SendFileToClientRequest) *pb.SendFileToClientResponse {
+func (s *Server) SendFileToClient(_ context.Context, request *pb.SendFileToClientRequest) (*pb.SendFileToClientResponse, error) {
 	s.Logger.Info("Client requested file", request.Payload.File.Name)
 	return &pb.SendFileToClientResponse{
 		Id:         uuid.NewString(),
@@ -177,10 +176,10 @@ func (s *Server) SendFileToClient(_ *gin.Context, request *pb.SendFileToClientRe
 			Status: "Retrieved file: " + request.Payload.GetFile().GetName(),
 		},
 		File: nil,
-	}
+	}, nil
 }
 
-func (s *Server) DeleteFile(ctx *gin.Context, request *pb.DeleteFileRequest) *pb.DeleteFileResponse {
+func (s *Server) DeleteFile(ctx context.Context, request *pb.DeleteFileRequest) (*pb.DeleteFileResponse, error) {
 	err := os.Remove(path.Join(fmt.Sprintf(s.Config.OutputPath, s.SessionID), request.Payload.File.Name))
 	if err != nil {
 		s.Logger.Error("Failed to delete a file", err.Error())
@@ -191,10 +190,10 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *pb.DeleteFileRequest) *pb
 				Code:    pb.ErrorsEnum_FAILED_DELETE_FILE,
 				Message: err.Error(),
 			},
-		}
+		}, nil
 	} else {
 		s.Logger.Info("File was deleted successfully")
-		files := s.ListFiles(ctx)
+		files, _ := s.ListFiles(ctx, &emptypb.Empty{})
 		if !files.Successful {
 			s.Logger.Error("Couldn't list files")
 			return &pb.DeleteFileResponse{
@@ -204,7 +203,7 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *pb.DeleteFileRequest) *pb
 					Code:    pb.ErrorsEnum_FAILED_LISTING_FILES,
 					Message: "Couldn't list files after deletion",
 				},
-			}
+			}, nil
 		} else {
 			s.Logger.Info("Sending new list of files to client")
 			return &pb.DeleteFileResponse{
@@ -215,12 +214,12 @@ func (s *Server) DeleteFile(ctx *gin.Context, request *pb.DeleteFileRequest) *pb
 					Status: "File was deleted successfully",
 				},
 				Files: files.Files,
-			}
+			}, nil
 		}
 	}
 }
 
-func (s *Server) DeleteSession(_ *gin.Context) *pb.DeleteSessionResponse {
+func (s *Server) DeleteSession(_ context.Context, _ *emptypb.Empty) (*pb.DeleteSessionResponse, error) {
 	err := os.Remove(fmt.Sprintf(s.Config.OutputPath, s.SessionID))
 	if err != nil {
 		s.Logger.Error("Failed to delete session")
@@ -231,7 +230,7 @@ func (s *Server) DeleteSession(_ *gin.Context) *pb.DeleteSessionResponse {
 				Code:    pb.ErrorsEnum_FAILED_DELETE_SESSION,
 				Message: err.Error(),
 			},
-		}
+		}, nil
 	} else {
 		err = s.Ws.Close()
 		s.SessionID = ""
@@ -244,6 +243,6 @@ func (s *Server) DeleteSession(_ *gin.Context) *pb.DeleteSessionResponse {
 				Code:   pb.SuccessEnum_SESSION_DELETE,
 				Status: "Your session was deleted, forever.",
 			},
-		}
+		}, nil
 	}
 }

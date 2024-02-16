@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -8,10 +9,11 @@ import (
 	"github.com/gorilla/websocket"
 	c "github.com/gx/youtubeDownloader/constants"
 	db "github.com/gx/youtubeDownloader/database"
-	"github.com/gx/youtubeDownloader/protos"
+	pb "github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"net/http"
 	"strings"
 	"time"
@@ -49,8 +51,8 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 func (s *Server) StartListener(ctx *gin.Context) {
 	defer func() {
 		if msg := recover(); msg != nil {
-			s.SendMessage(ctx, &protos.PanicResponse{
-				Code:    protos.ErrorsEnum_MALFORMED_MESSAGE,
+			s.SendMessage(ctx, &pb.PanicResponse{
+				Code:    pb.ErrorsEnum_MALFORMED_MESSAGE,
 				Message: fmt.Sprintf("%s\n%+v", "Message was malformed", msg),
 			})
 			s.StartListener(ctx)
@@ -59,8 +61,8 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 	session := s.NewSession(ctx)
 	if session == nil {
-		s.SendMessage(ctx, &protos.PanicResponse{
-			Code:    protos.ErrorsEnum_CATASTROPHIC_ERROR,
+		s.SendMessage(ctx, &pb.PanicResponse{
+			Code:    pb.ErrorsEnum_CATASTROPHIC_ERROR,
 			Message: "Failed to start a new session",
 		})
 		_ = s.Ws.Close()
@@ -81,7 +83,7 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		s.Logger.Info("Got a message", base64.StdEncoding.EncodeToString(message))
 
-		messageActionCode := protos.ActionCode{}
+		messageActionCode := pb.ActionCode{}
 
 		err = json.Unmarshal(message, &messageActionCode)
 		if ok := s.checkMessageError(ctx, err); !ok {
@@ -90,45 +92,45 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		s.Logger.Info("Checking which action to take")
 
-		code := protos.ActionsEnum_value[messageActionCode.Code]
+		code := pb.ActionsEnum_value[messageActionCode.Code]
 
 		switch code {
-		case int32(protos.ActionsEnum_DOWNLOAD_AUDIO):
+		case int32(pb.ActionsEnum_DOWNLOAD_AUDIO):
 			s.Logger.Info("Starting audio download")
-			request := &protos.DownloadRequest{}
+			request := &pb.DownloadRequest{}
 
 			err = json.Unmarshal(message, &request)
 			if ok := s.checkMessageError(ctx, err); ok {
-				download := s.Download(ctx, request)
+				download, _ := s.Download(ctx, request)
 
 				s.SendMessage(ctx, download)
 				continue
 			}
 
-		case int32(protos.ActionsEnum_LIST_FILES):
+		case int32(pb.ActionsEnum_LIST_FILES):
 			s.Logger.Info("Listing files")
-			files := s.ListFiles(ctx)
+			files, _ := s.ListFiles(ctx, &emptypb.Empty{})
 			s.SendMessage(ctx, files)
 			continue
 
-		case int32(protos.ActionsEnum_DELETE_FILE):
+		case int32(pb.ActionsEnum_DELETE_FILE):
 			s.Logger.Info("Deleting a file")
-			request := &protos.DeleteFileRequest{}
+			request := &pb.DeleteFileRequest{}
 
 			err = json.Unmarshal(message, &request)
 			if ok := s.checkMessageError(ctx, err); ok {
-				files := s.DeleteFile(ctx, request)
+				files, _ := s.DeleteFile(ctx, request)
 				s.SendMessage(ctx, files)
 				continue
 			}
 
-		case int32(protos.ActionsEnum_RETRIEVE_FILE):
+		case int32(pb.ActionsEnum_RETRIEVE_FILE):
 			s.Logger.Info("Sending a file to a client")
-			request := &protos.SendFileToClientRequest{}
+			request := &pb.SendFileToClientRequest{}
 
 			err = json.Unmarshal(message, &request)
 			if ok := s.checkMessageError(ctx, err); ok {
-				file := s.SendFileToClient(ctx, request)
+				file, _ := s.SendFileToClient(ctx, request)
 
 				s.SendMessage(ctx, file)
 				continue
@@ -136,8 +138,8 @@ func (s *Server) StartListener(ctx *gin.Context) {
 
 		default:
 			s.Logger.Info("Message didn't have a known code")
-			s.SendMessage(ctx, &protos.PanicResponse{
-				Code:    protos.ErrorsEnum_NOT_RECOGNIZED,
+			s.SendMessage(ctx, &pb.PanicResponse{
+				Code:    pb.ErrorsEnum_NOT_RECOGNIZED,
 				Message: fmt.Sprintf("The code %v sent was not recognized", messageActionCode.Code),
 			})
 			continue
@@ -178,15 +180,15 @@ func (s *Server) NewSession(ctx *gin.Context) *db.Session {
 		return nil
 	}
 
-	s.SendMessage(ctx, &protos.CreateSessionResponse{
-		Code:      protos.SuccessEnum_SESSION_ID,
+	s.SendMessage(ctx, &pb.CreateSessionResponse{
+		Code:      pb.SuccessEnum_SESSION_ID,
 		SessionId: session.Session,
 	})
 
 	s.Logger.SetSessionID(session.Session)
-	s.CreateSessionFolder(ctx, &protos.CreateSessionFolderRequest{
-		Code: protos.ActionsEnum_NEW_SESSION.String(),
-		Payload: &protos.CreateSessionFolderRequestPayload{
+	_, _ = s.CreateSessionFolder(ctx, &pb.CreateSessionFolderRequest{
+		Code: pb.ActionsEnum_NEW_SESSION.String(),
+		Payload: &pb.CreateSessionFolderRequestPayload{
 			Session: session.Session,
 		},
 	})
@@ -197,8 +199,8 @@ func (s *Server) NewSession(ctx *gin.Context) *db.Session {
 func (s *Server) checkMessageError(ctx *gin.Context, err error) bool {
 	if err != nil {
 		s.Logger.Error("Message was malformed", err.Error())
-		s.SendMessage(ctx, &protos.PanicResponse{
-			Code:    protos.ErrorsEnum_MALFORMED_MESSAGE,
+		s.SendMessage(ctx, &pb.PanicResponse{
+			Code:    pb.ErrorsEnum_MALFORMED_MESSAGE,
 			Message: "Message was malformed",
 		})
 		return false
@@ -207,20 +209,20 @@ func (s *Server) checkMessageError(ctx *gin.Context, err error) bool {
 	return true
 }
 
-func (s *Server) SendMessage(ctx *gin.Context, message proto.Message) {
+func (s *Server) SendMessage(ctx context.Context, message proto.Message) {
 	marshaller := protojson.MarshalOptions{
 		EmitDefaultValues: true,
 	}
 
 	out, err := marshaller.Marshal(message)
 	if err != nil {
-		status := http.StatusInternalServerError
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
+		//status := http.StatusInternalServerError
+		//ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
 	}
 
 	if err = s.Ws.WriteMessage(websocket.TextMessage, out); err != nil {
-		status := http.StatusInternalServerError
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
+		//status := http.StatusInternalServerError
+		//ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
 	}
 }
 

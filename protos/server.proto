@@ -6,7 +6,7 @@ option go_package = "../protos";
 import "messages.proto";
 import "google/protobuf/empty.proto";
 
-service Server{
+service Ytdl {
   rpc Download(DownloadRequest) returns (DownloadResponse);
   rpc CreateSessionFolder(CreateSessionFolderRequest) returns (CreateSessionFolderResponse);
   rpc ListFiles(google.protobuf.Empty) returns (ListFilesResponse);
