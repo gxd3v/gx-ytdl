@@ -15,26 +15,26 @@ func (db *Database) Connect(conn string) *Database {
 		panic("Failed to connect to the main database " + err.Error())
 	}
 
-	db.Main = gormDB.Debug()
+	db.DB = gormDB.Debug()
+	return db
+}
 
+func (db *Database) Model(model any) *Database {
+	db.DB = db.DB.Model(model)
 	return db
 }
 
 func (db *Database) Transactional() *Database {
-	if db.Back == nil {
-		db.Back = db.Main
-	}
-	db.Main = db.Back.Begin()
-	return db
+	return &Database{db.DB.Begin()}
 }
 
-func (db *Database) Commit() error { return db.Main.Commit().Error }
+func (db *Database) Commit() error { return db.DB.Commit().Error }
 
-func (db *Database) Rollback() error { return db.Main.Rollback().Error }
+func (db *Database) Rollback() error { return db.DB.Rollback().Error }
 
 func (db *Database) Insert(model ...interface{}) error {
 	for _, m := range model {
-		err := db.Main.Model(m).Create(m).Error
+		err := db.DB.Create(m).Error
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (db *Database) Insert(model ...interface{}) error {
 
 func (db *Database) Delete(model ...interface{}) error {
 	for _, m := range model {
-		err := db.Main.Model(m).Delete(m).Error
+		err := db.DB.Delete(m).Error
 		if err != nil {
 			return err
 		}
@@ -55,32 +55,24 @@ func (db *Database) Delete(model ...interface{}) error {
 }
 
 func (db *Database) Get(id string) *Database {
-	db.Main = db.Main.Where("id = ?", id)
+	db.DB = db.DB.Where("id = ?", id)
 	return db
 }
 
 func (db *Database) GetByField(field, value string) *Database {
-	db.Main = db.Main.Where(fmt.Sprintf("%s = ?", field), value)
+	db.DB = db.DB.Where(fmt.Sprintf("%s = ?", field), value)
 	return db
 }
 
 func (db *Database) List() []*interface{} {
 	var data []*interface{}
-	db.Main.Find(&data)
+	db.DB.Find(&data)
 
 	return data
 }
 
-func (db *Database) Model(model interface{}) *Database {
-	if db.Back == nil {
-		db.Back = db.Main
-	}
-	db.Main = db.Back.Model(model)
-	return db
-}
-
 func (db *Database) Scan(data interface{}) (interface{}, error) {
-	err := db.Main.Scan(&data).Error
+	err := db.DB.Scan(&data).Error
 	if err != nil {
 		return nil, err
 	}

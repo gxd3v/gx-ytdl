@@ -83,7 +83,7 @@ func (s *Server) CreateSessionFolder(_ context.Context, request *pb.CreateSessio
 	s.Storage = fmt.Sprintf(s.Config.OutputPath, request.Payload.GetSession())
 	err := os.Mkdir(s.Storage, os.ModeAppend)
 	if err != nil {
-		s.Logger.Error("Failed to create a session folder")
+		s.Logger.Error("Failed to create a session folder", err.Error())
 		return &pb.CreateSessionFolderResponse{
 			Id:         uuid.NewString(),
 			Successful: false,

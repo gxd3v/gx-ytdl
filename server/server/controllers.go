@@ -20,15 +20,19 @@ import (
 )
 
 func (s *Server) UpgradeConnection(ctx *gin.Context) {
-	if s.Banned(ctx) {
-		status := http.StatusUnauthorized
-		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "You are banned from using this service"))
-		return
-	}
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
+	}
+
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		if s.Banned(r.RemoteAddr) {
+			status := http.StatusUnauthorized
+			ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "You are banned from using this service"))
+			return false
+		}
+		return true
 	}
 
 	s.Logger.Info("Upgrading connection")
@@ -36,6 +40,7 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 	if err != nil {
 		status := http.StatusInternalServerError
 		ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "Failed to upgrade connection to websocket"))
+		return
 	}
 
 	s.Logger.Info("Connection upgraded")
@@ -52,10 +57,9 @@ func (s *Server) StartListener(ctx *gin.Context) {
 	defer func() {
 		if msg := recover(); msg != nil {
 			s.SendMessage(ctx, &pb.PanicResponse{
-				Code:    pb.ErrorsEnum_MALFORMED_MESSAGE,
-				Message: fmt.Sprintf("%s\n%+v", "Message was malformed", msg),
+				Code:    pb.ErrorsEnum_CATASTROPHIC_ERROR,
+				Message: fmt.Sprintf("%s\n%+v", "Failed to start listener\n", msg),
 			})
-			s.StartListener(ctx)
 		}
 	}()
 
@@ -149,12 +153,12 @@ func (s *Server) StartListener(ctx *gin.Context) {
 }
 
 func (s *Server) NewSession(ctx *gin.Context) *db.Session {
-	transaction := s.Database.Transactional()
-	defer func() { _ = transaction.Commit() }()
+	database := s.Database.Transactional().Model(&db.Session{})
+	defer func() { _ = database.Commit() }()
 
 	session := &db.Session{}
 	if s.SessionID != "" {
-		scan, err := s.Database.GetByField("session", s.SessionID).Scan(&session)
+		scan, err := database.GetByField("session", s.SessionID).Scan(session)
 		if err != nil {
 			session = s.Database.NewSession()
 		}
@@ -174,9 +178,9 @@ func (s *Server) NewSession(ctx *gin.Context) *db.Session {
 		s.Logger.Info("Creating a new session", session.Session)
 	}
 
-	err := transaction.Insert(session)
+	err := database.Insert(session)
 	if err != nil {
-		_ = transaction.Rollback()
+		_ = database.Rollback()
 		return nil
 	}
 
@@ -216,36 +220,37 @@ func (s *Server) SendMessage(ctx context.Context, message proto.Message) {
 
 	out, err := marshaller.Marshal(message)
 	if err != nil {
-		//status := http.StatusInternalServerError
-		//ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
 	}
 
 	if err = s.Ws.WriteMessage(websocket.TextMessage, out); err != nil {
-		//status := http.StatusInternalServerError
-		//ctx.JSON(status, util.ResponseJSONBody(fmt.Sprintf("%d", status), "The response message from the server failed to be parsed"))
 	}
 }
 
-func (s *Server) Banned(ctx *gin.Context) bool {
-	remote := ctx.Request.RemoteAddr
+func (s *Server) Banned(remote string) bool {
+	database := s.Database.Transactional().Model(&db.BannedIP{})
+	defer func() { _ = database.Commit() }()
+
 	if strings.Contains(remote, ":") {
 		remote = strings.Split(remote, ":")[0]
 	}
 
 	bannedIP := &db.BannedIP{}
-	data, err := s.Database.Model(bannedIP).GetByField("ip", remote).Scan(bannedIP)
+	data, err := database.GetByField("ip", remote).Scan(bannedIP)
 	if err != nil {
+		_ = database.Rollback()
 		s.Logger.Error("Failed to scan for data", err.Error())
 		return false
 	}
 
 	bip, ok := data.(*db.BannedIP)
 	if !ok {
+		_ = database.Rollback()
 		s.Logger.Error("Failed to cast data to expected model")
 		return false
 	}
 
 	if bip.Ip == remote {
+		_ = database.Rollback()
 		s.Logger.Warning(fmt.Sprintf("IP %s tried to connect but it's banned from the service", remote))
 		return true
 	}

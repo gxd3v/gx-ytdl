@@ -5,9 +5,28 @@ import (
 	"time"
 )
 
+type Connector struct {
+	db *Database
+}
+
+type connector interface {
+}
+
 type Database struct {
-	Main *gorm.DB
-	Back *gorm.DB
+	DB *gorm.DB
+}
+
+type database interface {
+	Connect(conn string) *Database
+	Model(model any) *Database
+	Transactional() *Database
+	Commit() error
+	Rollback() error
+	Insert(model ...interface{}) error
+	Delete(model ...interface{}) error
+	Get(id string) *Database
+	GetByField(field, value string) *Database
+	List() []*interface{}
 }
 
 //type BaseModel struct {
@@ -65,18 +84,6 @@ func (Ytdl) TableName() string {
 
 func (Session) TableName() string {
 	return "sessions"
-}
-
-type database interface {
-	Connect(conn string) *Database
-	Transactional() *Database
-	Commit() error
-	Rollback() error
-	Insert(model ...interface{}) error
-	Delete(model ...interface{}) error
-	Get(id string) *Database
-	GetByField(field, value string) *Database
-	List() []*interface{}
 }
 
 type controllers interface {

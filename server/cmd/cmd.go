@@ -1,11 +1,11 @@
-package main
+package cmd
 
 import (
 	"github.com/gx/youtubeDownloader/log"
 	"github.com/gx/youtubeDownloader/server"
 )
 
-func main() {
+func Run() {
 	srv := server.Server{}
 	logger := &log.Log{}
 	logger.Setup()
