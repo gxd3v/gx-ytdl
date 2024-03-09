@@ -100,7 +100,7 @@ message CreateSessionRequestPayload{}
 
 message CreateSessionResponse{
   SuccessEnum code       = 1 [json_name = "code"];
-  string      session_id = 2 [json_name = "sessionID"];
+  string      session_id = 2 [json_name = "session_id"];
 }
 
 /*===================================*/
