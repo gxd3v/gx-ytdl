@@ -1,0 +1,9 @@
+create_table("session") {
+    t.Column("id", "string", {primary: true})
+    t.Column("created_at", "timestamp")
+    t.Column("updated_at", "timestamp")
+    t.Column("deleted_at", "timestamp")
+    t.Column("created_by", "string")
+    t.Column("session", "string")
+    t.Column("last_login", "timestamp")
+}

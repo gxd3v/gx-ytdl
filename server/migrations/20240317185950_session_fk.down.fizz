@@ -1,0 +1,1 @@
+drop_foreign_key("ytdl", "session_id_fk", {"if_exists": true})

@@ -1,0 +1,1 @@
+add_foreign_key("ytdl", "session_id", {"session": ["id"]}, {"name": "session_id_fk"})

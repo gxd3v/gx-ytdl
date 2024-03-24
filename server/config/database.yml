@@ -1,0 +1,15 @@
+development:
+  dialect: postgres
+  database: ytdl
+  user: postgres
+  password: {{envOr "GX-YTDL-DATABASE-PASSWORD-DEV" ""}}
+  host: 10.0.0.77
+  pool: 5
+  options:
+    migration_table_name: migrations
+#
+#test:
+#  url: {{envOr "TEST_DATABASE_URL" ""}}
+#
+#production:
+#  url: {{envOr "PRD-GX-YTDL-DATABASE-URL" ""}}
