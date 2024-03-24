@@ -1,14 +1,15 @@
 package config
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/gx/youtubeDownloader/constants"
 	"os"
 )
 
-func (config *Config) Get() (*Config, error) {
+func Get() (*Config, error) {
+	var config Config
+
 	if value, ok := os.LookupEnv(config.envString("SERVICE-ID")); !ok {
 		return nil, errors.New("no service id found in env variables")
 	} else {
@@ -19,16 +20,6 @@ func (config *Config) Get() (*Config, error) {
 		return nil, errors.New("no connection route found in env variables")
 	} else {
 		config.ConnectionRoute = value
-	}
-
-	if value, ok := os.LookupEnv(config.envString("DATABASE")); !ok {
-		return nil, errors.New("no database address found in env variables")
-	} else {
-		decodeString, err := base64.StdEncoding.DecodeString(value)
-		if err != nil {
-			return nil, err
-		}
-		config.Database = string(decodeString)
 	}
 
 	if value, ok := os.LookupEnv(config.envString("PYTHON-BINARY")); !ok {
@@ -49,7 +40,13 @@ func (config *Config) Get() (*Config, error) {
 		config.OutputPath = value
 	}
 
-	return config, nil
+	if value, ok := os.LookupEnv(config.envString("SODA-PATH")); !ok {
+		return nil, errors.New("no soda path found in env variables")
+	} else {
+		config.SodaPath = value
+	}
+
+	return &config, nil
 }
 
 func (config *Config) envString(val string) string {

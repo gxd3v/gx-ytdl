@@ -1,6 +1,8 @@
 package main
 
-import "github.com/gx/youtubeDownloader/cmd"
+import (
+	"github.com/gx/youtubeDownloader/cmd"
+)
 
 func main() {
 	cmd.Run()

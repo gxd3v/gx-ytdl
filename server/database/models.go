@@ -1,92 +1,22 @@
 package database
 
 import (
-	"gorm.io/gorm"
-	"time"
+	"github.com/gobuffalo/pop/v6"
+	"github.com/gx/youtubeDownloader/models"
 )
 
-type Connector struct {
-	db *Database
-}
-
-type connector interface {
-}
-
 type Database struct {
-	DB *gorm.DB
+	DB *pop.Connection
 }
 
 type database interface {
-	Connect(conn string) *Database
-	Model(model any) *Database
 	Transactional() *Database
-	Commit() error
-	Rollback() error
-	Insert(model ...interface{}) error
-	Delete(model ...interface{}) error
-	Get(id string) *Database
-	GetByField(field, value string) *Database
-	List() []*interface{}
-}
-
-//type BaseModel struct {
-//	Id        string
-//	CreatedAt time.Time
-//	UpdatedAt time.Time
-//	DeletedAt time.Time
-//	CreatedBy string
-//}
-
-type Ytdl struct {
-	Id        string
-	CreatedAt *time.Time
-	UpdatedAt *time.Time
-	DeletedAt *time.Time
-	CreatedBy string
-	Url       string
-	StorePath string
-	SessionId string
-	Ttl       int
-	Active    bool
-	FileSize  int
-}
-
-type BannedIP struct {
-	Id        string
-	CreatedAt *time.Time
-	UpdatedAt *time.Time
-	DeletedAt *time.Time
-	CreatedBy string
-	Ip        string
-}
-
-type Session struct {
-	Id        string
-	CreatedAt *time.Time
-	UpdatedAt *time.Time
-	DeletedAt *time.Time
-	CreatedBy string
-	Session   string
-	LastLogin *time.Time
-}
-
-type Tabler interface {
-	TableName() string
-}
-
-func (BannedIP) TableName() string {
-	return "banned_ips"
-}
-
-func (Ytdl) TableName() string {
-	return "store"
-}
-
-func (Session) TableName() string {
-	return "sessions"
-}
-
-type controllers interface {
-	NewSession() *Session
-	NewYTDL(url string, storePath string, sessionId string, fileSize int) *Ytdl
+	Commit()
+	Rollback()
+	List() ([]*any, error)
+	Get(id string) (any, error)
+	Insert(data ...any) (any, error)
+	Update(data ...any) (any, error)
+	Delete(data ...any) (any, error)
+	GetByField(out any, conditions ...models.Condition) (any, error)
 }

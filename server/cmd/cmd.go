@@ -6,10 +6,6 @@ import (
 )
 
 func Run() {
-	srv := server.Server{}
-	logger := &log.Log{}
-	logger.Setup()
-
-	srv.Logger = logger
-	srv.Host()
+	log.Info("Hosting server")
+	server.New().Host()
 }

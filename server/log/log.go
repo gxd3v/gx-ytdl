@@ -1,69 +1,62 @@
 package log
 
 import (
-	"bytes"
-	"fmt"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"github.com/pieterclaerhout/go-log"
 	"os"
-	"path/filepath"
-	"runtime"
-	"time"
 )
 
-func (l *Log) callerLocation(file string, line int) string {
-	fileName := filepath.Base(file)
-	parentFolder := filepath.Base(filepath.Dir(file))
-	location := fmt.Sprintf("%s/%s:%d", parentFolder, fileName, line)
+func Info(msg string, args ...string) {
+	log.DebugMode = true
+	log.PrintTimestamp = true
+	log.PrintColors = true
+	log.TimeFormat = "2006-01-02 15:04:05.000"
 
-	return location
+	if len(args) > 0 {
+		log.Infof(msg, args)
+	} else {
+		log.Infof(msg)
+	}
 }
 
-func (l *Log) Setup() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
-	var buffer bytes.Buffer
-	writer := zerolog.ConsoleWriter{Out: &buffer, TimeFormat: time.RFC3339}
-	l.Inner = log.Output(writer)
-	l.Buffer = &buffer
+func Warn(msg string, args ...string) {
+	log.DebugMode = true
+	log.PrintTimestamp = true
+	log.PrintColors = true
+	log.TimeFormat = "2006-01-02 15:04:05.000"
+
+	if len(args) > 0 {
+		log.Warnf(msg, args)
+	} else {
+		log.Warnf(msg)
+	}
 }
 
-func (l *Log) Info(message string, args ...interface{}) {
-	defer l.Buffer.Reset()
-	_, file, line, _ := runtime.Caller(1)
-	location := l.callerLocation(file, line)
-	log.Info().Interface("session", l.SessionID).Interface("arguments", args).Str("caller", location).Msg(message)
-	l.Inner.Info().Interface("session", l.SessionID).Interface("arguments", args).Str("caller", location).Msg(message)
+func Error(err error, msg string, args ...string) {
+	log.DebugMode = true
+	log.PrintTimestamp = true
+	log.PrintColors = true
+	log.TimeFormat = "2006-01-02 15:04:05.000"
+
+	if len(args) > 0 {
+		log.Errorf(msg, args)
+	} else {
+		log.Error(msg)
+	}
+	log.StackTrace(err)
 }
 
-func (l *Log) Error(message string, args ...interface{}) {
-	defer l.Buffer.Reset()
-	_, file, line, _ := runtime.Caller(1)
-	location := l.callerLocation(file, line)
-	log.Error().Interface("arguments", args).Str("caller", location).Msg(message)
-	l.Inner.Error().Interface("arguments", args).Str("caller", location).Msg(message)
-}
+func Fatal(err error, msg string, args ...string) {
+	log.DebugMode = true
+	log.PrintTimestamp = true
+	log.PrintColors = true
+	log.TimeFormat = "2006-01-02 15:04:05.000"
 
-func (l *Log) Warning(message string, args ...interface{}) {
-	defer l.Buffer.Reset()
-	_, file, line, _ := runtime.Caller(1)
-	location := l.callerLocation(file, line)
-	log.Warn().Interface("arguments", args).Str("caller", location).Msg(message)
-	l.Inner.Warn().Interface("arguments", args).Str("caller", location).Msg(message)
-}
+	if len(args) > 0 {
+		log.Errorf(msg, args)
+	} else {
+		log.Error(msg)
+	}
 
-func (l *Log) Debug(message string, args ...interface{}) {
-	defer l.Buffer.Reset()
-	_, file, line, _ := runtime.Caller(1)
-	location := l.callerLocation(file, line)
-	log.Debug().Interface("arguments", args).Str("caller", location).Msg(message)
-	l.Inner.Debug().Interface("arguments", args).Str("caller", location).Msg(message)
-}
-
-func (l *Log) SetSessionID(sessionID string) *Log {
-	l.SessionID = sessionID
-	return l
-}
-
-func (l *Log) StoreLog() {
-	l.Buffer.Reset()
+	log.StackTrace(err)
+	os.Exit(1)
 }

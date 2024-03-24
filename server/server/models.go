@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/gx/youtubeDownloader/config"
 	"github.com/gx/youtubeDownloader/database"
-	"github.com/gx/youtubeDownloader/log"
 )
 
 //type Business interface {
@@ -21,7 +20,6 @@ import (
 type Server struct {
 	Router    *gin.Engine
 	Config    *config.Config
-	Logger    *log.Log
 	Ws        *websocket.Conn
 	SessionID string `json:"sessionID,omitempty"`
 	Storage   string `json:"storage,omitempty"`

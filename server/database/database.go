@@ -1,83 +1,113 @@
 package database
 
 import (
-	"errors"
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/gobuffalo/pop/v6"
+	"github.com/gx/youtubeDownloader/models"
 )
 
 var _ database = (*Database)(nil)
 
-func (db *Database) Connect(conn string) *Database {
-	gormDB, err := gorm.Open(postgres.Open(conn), &gorm.Config{})
-	if err != nil {
-		panic("Failed to connect to the main database " + err.Error())
-	}
-
-	db.DB = gormDB.Debug()
-	return db
-}
-
-func (db *Database) Model(model any) *Database {
-	db.DB = db.DB.Model(model)
-	return db
-}
-
-func (db *Database) Transactional() *Database {
-	return &Database{db.DB.Begin()}
-}
-
-func (db *Database) Commit() error { return db.DB.Commit().Error }
-
-func (db *Database) Rollback() error { return db.DB.Rollback().Error }
-
-func (db *Database) Insert(model ...interface{}) error {
-	for _, m := range model {
-		err := db.DB.Create(m).Error
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (db *Database) Delete(model ...interface{}) error {
-	for _, m := range model {
-		err := db.DB.Delete(m).Error
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (db *Database) Get(id string) *Database {
-	db.DB = db.DB.Where("id = ?", id)
-	return db
-}
-
-func (db *Database) GetByField(field, value string) *Database {
-	db.DB = db.DB.Where(fmt.Sprintf("%s = ?", field), value)
-	return db
-}
-
-func (db *Database) List() []*interface{} {
-	var data []*interface{}
-	db.DB.Find(&data)
-
-	return data
-}
-
-func (db *Database) Scan(data interface{}) (interface{}, error) {
-	err := db.DB.Scan(&data).Error
+func Connect(env string) (*Database, error) {
+	conn, err := pop.Connect(env)
 	if err != nil {
 		return nil, err
 	}
-	if data == nil {
-		return nil, errors.New("no data found")
+
+	migrator, err := pop.NewFileMigrator("./migrations", conn)
+	if err != nil {
+		return nil, err
 	}
+
+	err = migrator.Up()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Database{
+		DB: conn,
+	}, nil
+}
+
+func (db *Database) Transactional() *Database {
+	transaction, err := db.DB.Store.Transaction()
+	if err != nil {
+		return nil
+	}
+
+	db.DB.TX = transaction
+
+	return db
+}
+
+func (db *Database) Commit() {
+	_ = db.DB.TX.Commit()
+}
+
+func (db *Database) Rollback() {
+	_ = db.DB.TX.Rollback()
+}
+
+func (db *Database) List() ([]*any, error) {
+	var data []*any
+
+	err := db.DB.All(&data)
+	if err != nil {
+		return nil, err
+	}
+
 	return data, nil
+}
+
+func (db *Database) Get(id string) (any, error) {
+	var data any
+
+	err := db.DB.Find(&data, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (db *Database) Insert(data ...any) (any, error) {
+	err := db.DB.Create(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (db *Database) Update(data ...any) (any, error) {
+	err := db.DB.Update(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (db *Database) Delete(data ...any) (any, error) {
+	err := db.DB.Destroy(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (db *Database) GetByField(out any, conditions ...models.Condition) (any, error) {
+	var query *pop.Query
+
+	for _, condition := range conditions {
+		query = query.Where(fmt.Sprintf("%v %v %v", condition.Field, condition.Operator, condition.Value))
+	}
+
+	err := query.All(&out)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
