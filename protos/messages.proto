@@ -89,7 +89,6 @@ message DeleteFileResponse{
   bool     successful = 2 [json_name = "successful"];
   Success  success    = 3 [json_name = "success"];
   Error    error      = 4 [json_name = "error"];
-  repeated File files = 5 [json_name = "files"];
 }
 
 /*===================================*/
