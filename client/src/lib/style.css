@@ -9,7 +9,7 @@
   margin: 0;
   scroll-behavior: smooth;
   font-family: 'Roboto', sans-serif;
-  overflow: auto;
+  /*overflow: auto;*/
   /* box-shadow: inset 0px 0px 0px 1px #f00; */
   /* border: 1px solid red;
     background-color: rgba(200, 0, 255, 0.1); */
