@@ -1,15 +1,40 @@
 package config
 
 type Config struct {
-	ServicePrefix   string `json:"servicePrefix,omitempty"`
-	ServiceID       string `json:"serviceID,omitempty"`
-	ConnectionRoute string `json:"routeConnect,omitempty"`
+	Database     Database     `json:"database"`
+	Transporters Transporters `json:"transporters"`
+}
 
-	DatabaseEnv string `json:"database,omitempty"`
+type Database struct {
+	Conn string `json:"connection"`
+	Type string `json:"type"`
+	Soda string `json:"soda"`
+	Pool struct {
+		MaxConnections  int `json:"maxConnections"`
+		IdleConnections int `json:"idleConnections"`
+		TTL             int `json:"TTL"`
+	} `json:"pool"`
+}
 
-	PythonBinary   string `json:"pythonBinary,omitempty"`
-	DownloaderPath string `json:"downloaderPath,omitempty"`
-	OutputPath     string `json:"outputPath,omitempty"`
+type Transporters struct {
+	HTTP HTTP      `json:"HTTP"`
+	RPC  RPC       `json:"RPC"`
+	WS   Websocket `json:"WS"`
+}
 
-	SodaPath string `json:"sodaPath,omitempty"`
+type HTTP struct {
+	Host string `json:"host"`
+	Port string `json:"port"`
+}
+
+type RPC struct {
+	Host    string `json:"host"`
+	Port    string `json:"port"`
+	Reflect bool   `json:"reflect"`
+}
+
+type Websocket struct {
+	Host    string `json:"host"`
+	Port    string `json:"port"`
+	MaxSize int    `json:"maxSize"`
 }

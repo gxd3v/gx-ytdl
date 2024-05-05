@@ -1,11 +1,16 @@
 package cmd
 
 import (
-	"github.com/gx/youtubeDownloader/log"
-	"github.com/gx/youtubeDownloader/server"
+	"context"
+	"github.com/gx/youtubeDownloader/internal/logger"
+	"github.com/gx/youtubeDownloader/internal/transporters"
 )
 
 func Run() {
-	log.Info("Hosting server")
-	server.New().Host()
+	ctx := context.Background()
+
+	logger.Init(ctx)
+
+	t := transporters.New(ctx)
+	t.InitAllServers(ctx)
 }

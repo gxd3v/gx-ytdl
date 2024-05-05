@@ -1,4 +1,4 @@
-package server
+package downloader
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	c "github.com/gx/youtubeDownloader/constants"
-	"github.com/gx/youtubeDownloader/log"
+	logger2 "github.com/gx/youtubeDownloader/internal/logger"
+	"github.com/gx/youtubeDownloader/logger"
 	"github.com/gx/youtubeDownloader/models"
 	pb "github.com/gx/youtubeDownloader/protos"
 	"github.com/gx/youtubeDownloader/util"
@@ -37,7 +38,7 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 		return true
 	}
 
-	log.Info("Upgrading connection")
+	logger2.Info("Upgrading connection")
 	ws, err := upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {
 		status := http.StatusInternalServerError
@@ -45,13 +46,13 @@ func (s *Server) UpgradeConnection(ctx *gin.Context) {
 		return
 	}
 
-	log.Info("Connection upgraded")
+	logger2.Info("Connection upgraded")
 	s.Ws = ws
 
-	log.Info("Checking for connection reopening")
+	logger2.Info("Checking for connection reopening")
 	s.SessionID = ctx.Param(c.SessionParameter)
 
-	log.Info("Listening for codes")
+	logger2.Info("Listening for codes")
 	s.startListener(ctx)
 }
 
@@ -79,15 +80,15 @@ func (s *Server) startListener(ctx *gin.Context) {
 		msgType, message, err := s.Ws.ReadMessage()
 		if err != nil {
 			if msgType == c.ClientDisconnected {
-				log.Warn("Connection closed on client: %v - %v", s.SessionID, err.Error())
+				logger2.Warn("Connection closed on client: %v - %v", s.SessionID, err.Error())
 				_ = s.Ws.Close()
 				break
 			}
-			log.Info(fmt.Sprintf("Failed to read message from connection %v", err.Error()))
+			logger2.Info(fmt.Sprintf("Failed to read message from connection %v", err.Error()))
 			continue
 		}
 
-		log.Info("Got a message", base64.StdEncoding.EncodeToString(message))
+		logger2.Info("Got a message", base64.StdEncoding.EncodeToString(message))
 
 		messageActionCode := pb.ActionCode{}
 
@@ -96,13 +97,13 @@ func (s *Server) startListener(ctx *gin.Context) {
 			continue
 		}
 
-		log.Info("Checking which action to take")
+		logger2.Info("Checking which action to take")
 
 		code := pb.ActionsEnum_value[messageActionCode.Code]
 
 		switch code {
 		case int32(pb.ActionsEnum_DOWNLOAD_AUDIO):
-			log.Info("Starting audio download")
+			logger2.Info("Starting audio download")
 			request := &pb.DownloadRequest{}
 
 			err = json.Unmarshal(message, &request)
@@ -113,13 +114,13 @@ func (s *Server) startListener(ctx *gin.Context) {
 			}
 
 		case int32(pb.ActionsEnum_LIST_FILES):
-			log.Info("Listing files")
+			logger2.Info("Listing files")
 			files, _ := s.ListFiles(ctx, &emptypb.Empty{})
 			s.sendMessage(ctx, files)
 			continue
 
 		case int32(pb.ActionsEnum_DELETE_FILE):
-			log.Info("Deleting a file")
+			logger2.Info("Deleting a file")
 			request := &pb.DeleteFileRequest{}
 
 			err = json.Unmarshal(message, &request)
@@ -130,7 +131,7 @@ func (s *Server) startListener(ctx *gin.Context) {
 			}
 
 		case int32(pb.ActionsEnum_RETRIEVE_FILE):
-			log.Info("Sending a file to a client")
+			logger2.Info("Sending a file to a client")
 			request := &pb.SendFileToClientRequest{}
 
 			err = json.Unmarshal(message, &request)
@@ -141,7 +142,7 @@ func (s *Server) startListener(ctx *gin.Context) {
 			}
 
 		default:
-			log.Info("Message didn't have a known code")
+			logger2.Info("Message didn't have a known code")
 			s.sendMessage(ctx, &pb.PanicResponse{
 				Code:    pb.ErrorsEnum_NOT_RECOGNIZED,
 				Message: fmt.Sprintf("The code %v sent was not recognized", messageActionCode.Code),
@@ -186,12 +187,12 @@ func (s *Server) newSession(ctx *gin.Context) *models.Session {
 	} else {
 		session = s.Database.NewSession()
 		s.SessionID = session.Session
-		log.Info("Creating a new session", session.Session)
+		logger2.Info("Creating a new session", session.Session)
 
 		_, err := database.Insert(session)
 		if err != nil {
 			database.Rollback()
-			log.Error(err, "Failed to create session")
+			logger.Error(err, "Failed to create session")
 			return nil
 		}
 	}
@@ -201,7 +202,7 @@ func (s *Server) newSession(ctx *gin.Context) *models.Session {
 		SessionId: session.Session,
 	})
 
-	//log.SetSessionID(session.Session)
+	//logger.SetSessionID(session.Session)
 	_, _ = s.CreateSessionFolder(ctx, &pb.CreateSessionFolderRequest{
 		Code: pb.ActionsEnum_NEW_SESSION.String(),
 		Payload: &pb.CreateSessionFolderRequestPayload{
@@ -214,7 +215,7 @@ func (s *Server) newSession(ctx *gin.Context) *models.Session {
 
 func (s *Server) checkMessageError(ctx *gin.Context, err error) bool {
 	if err != nil {
-		log.Error(err, "Message was malformed")
+		logger.Error(err, "Message was malformed")
 		s.sendMessage(ctx, &pb.PanicResponse{
 			Code:    pb.ErrorsEnum_MALFORMED_MESSAGE,
 			Message: "Message was malformed",
@@ -235,36 +236,36 @@ func (s *Server) sendMessage(_ context.Context, message proto.Message) {
 	}
 
 	if err = s.Ws.WriteMessage(websocket.TextMessage, out); err != nil {
-		log.Error(err, "Failed to send message to client")
+		logger.Error(err, "Failed to send message to client")
 	}
 }
 
 func (s *Server) banned(remote string) bool {
-	database := s.Database.Transactional()
-	defer func() { database.Commit() }()
+	//database := s.Database.Transactional()
+	//defer func() { database.Commit() }()
 
 	if strings.Contains(remote, ":") {
 		remote = strings.Split(remote, ":")[0]
 	}
 
-	bannedIP := &models.BannedIP{}
-	data, err := database.GetByField(bannedIP, models.Condition{Field: "ip", Operator: "=", Value: remote})
+	bannedIP := make([]*models.BannedIP, 0)
+	data, err := s.Database.GetByField(bannedIP, models.Condition{Field: "ip", Operator: "=", Value: remote})
 	if err != nil {
-		database.Rollback()
-		log.Error(err, "Failed to scan for data")
+		//database.Rollback()
+		logger.Error(err, "Failed to scan for data")
 		return false
 	}
 
 	bip, ok := data.(*models.BannedIP)
 	if !ok {
-		database.Rollback()
-		log.Error(errors.New("cast failed"), "Failed to cast data to expected model")
+		//database.Rollback()
+		logger.Error(errors.New("cast failed"), "Failed to cast data to expected model")
 		return false
 	}
 
 	if bip.Ip == remote {
-		database.Rollback()
-		log.Warn(fmt.Sprintf("IP %s tried to connect but it's banned from the service", remote))
+		//database.Rollback()
+		logger2.Warn(fmt.Sprintf("IP %s tried to connect but it's banned from the service", remote))
 		return true
 	}
 

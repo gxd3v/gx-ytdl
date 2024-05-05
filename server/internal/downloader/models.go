@@ -1,7 +1,6 @@
-package server
+package downloader
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/gx/youtubeDownloader/config"
 	"github.com/gx/youtubeDownloader/database"
@@ -18,7 +17,6 @@ import (
 //}
 
 type Server struct {
-	Router    *gin.Engine
 	Config    *config.Config
 	Ws        *websocket.Conn
 	SessionID string `json:"sessionID,omitempty"`

@@ -30,7 +30,7 @@ func Connect(env string) (*Database, error) {
 }
 
 func (db *Database) Transactional() *Database {
-	transaction, err := db.DB.Store.Transaction()
+	transaction, err := db.DB.TX.Transaction()
 	if err != nil {
 		return nil
 	}
@@ -38,6 +38,15 @@ func (db *Database) Transactional() *Database {
 	db.DB.TX = transaction
 
 	return db
+
+	//transaction, _ := db.DB.NewTransaction()
+	////if err != nil {
+	////	return nil
+	////}
+	//
+	//return Database{
+	//	DB: transaction,
+	//}
 }
 
 func (db *Database) Commit() {
@@ -98,10 +107,10 @@ func (db *Database) Delete(data ...any) (any, error) {
 }
 
 func (db *Database) GetByField(out any, conditions ...models.Condition) (any, error) {
-	var query *pop.Query
+	query := db.DB.Q()
 
 	for _, condition := range conditions {
-		query = query.Where(fmt.Sprintf("%v %v %v", condition.Field, condition.Operator, condition.Value))
+		query = query.Where(fmt.Sprintf("%v %v '%v'", condition.Field, condition.Operator, condition.Value))
 	}
 
 	err := query.All(&out)

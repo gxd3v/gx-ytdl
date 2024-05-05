@@ -1,13 +1,14 @@
-package server
+package downloader
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	c "github.com/gx/youtubeDownloader/constants"
-	"github.com/gx/youtubeDownloader/log"
+	"github.com/gx/youtubeDownloader/internal/downloader/message"
+	logger2 "github.com/gx/youtubeDownloader/internal/logger"
+	"github.com/gx/youtubeDownloader/logger"
 	pb "github.com/gx/youtubeDownloader/protos"
-	"github.com/gx/youtubeDownloader/server/message"
 	"github.com/gx/youtubeDownloader/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -21,17 +22,17 @@ func (s *Server) Download(ctx context.Context, request *pb.DownloadRequest) (*pb
 	database := s.Database.Transactional()
 	defer database.Commit()
 
-	log.Info("Trying to parse the URL")
+	logger2.Info("Trying to parse the URL")
 	url, err := util.ParseURL(request.Payload.GetUrl())
 	if err != nil {
 		database.Rollback()
-		log.Error(err, "URL was not valid")
+		logger.Error(err, "URL was not valid")
 		return message.NewDownloadResponse(ctx, int32(pb.ErrorsEnum_FAILED_DOWNLOAD), "Invalid URL", err), nil
 	}
 
 	outputPath := fmt.Sprintf(s.Config.OutputPath, s.SessionID)
 
-	log.Info("Invoking external downloader")
+	logger2.Info("Invoking external downloader")
 	cmd := exec.Command(s.Config.PythonBinary, s.Config.DownloaderPath)
 	cmd.Args = append(cmd.Args, "-u", url.String())
 	cmd.Args = append(cmd.Args, "-op", outputPath)
@@ -42,13 +43,13 @@ func (s *Server) Download(ctx context.Context, request *pb.DownloadRequest) (*pb
 	err = cmd.Run()
 	if err != nil {
 		database.Rollback()
-		log.Error(err, "Failed to run external downloader")
+		logger.Error(err, "Failed to run external downloader")
 		return message.NewDownloadResponse(ctx, int32(pb.ErrorsEnum_FAILED_DOWNLOAD), "", err), nil
 	}
 
 	_ = cmd.Wait()
 
-	log.Info("Download successfully finished")
+	logger2.Info("Download successfully finished")
 
 	//FIXME should not be sending messages here
 	files, err := s.ListFiles(ctx, &emptypb.Empty{})
@@ -59,7 +60,7 @@ func (s *Server) Download(ctx context.Context, request *pb.DownloadRequest) (*pb
 	_, err = database.Insert(ytdl)
 	if err != nil {
 		database.Rollback()
-		log.Error(err, "Failed to insert data")
+		logger.Error(err, "Failed to insert data")
 		return message.NewDownloadResponse(ctx, int32(pb.ErrorsEnum_FAILED_DOWNLOAD), "Download failed", errors.New("")), nil
 	}
 
@@ -67,11 +68,11 @@ func (s *Server) Download(ctx context.Context, request *pb.DownloadRequest) (*pb
 }
 
 func (s *Server) CreateSessionFolder(ctx context.Context, request *pb.CreateSessionFolderRequest) (*pb.CreateSessionFolderResponse, error) {
-	log.Info("Creating folder to store downloads")
+	logger2.Info("Creating folder to store downloads")
 	s.Storage = fmt.Sprintf(s.Config.OutputPath, request.Payload.GetSession())
 	err := os.Mkdir(s.Storage, os.ModeAppend)
 	if err != nil {
-		log.Error(err, "Failed to create a session folder")
+		logger.Error(err, "Failed to create a session folder")
 		return message.NewCreateSessionFolderResponse(ctx, int32(pb.ErrorsEnum_FOLDER_ALREADY_EXISTS), "Failed to create the storage", err), nil
 	}
 
@@ -81,11 +82,11 @@ func (s *Server) CreateSessionFolder(ctx context.Context, request *pb.CreateSess
 func (s *Server) ListFiles(ctx context.Context, _ *emptypb.Empty) (*pb.ListFilesResponse, error) {
 	files, err := os.ReadDir(fmt.Sprintf(s.Config.OutputPath, s.SessionID))
 	if err != nil {
-		log.Error(err, "Failed to read the directory")
+		logger.Error(err, "Failed to read the directory")
 		return message.NewListFilesResponse(ctx, int32(pb.ErrorsEnum_FAILED_LISTING_FILES), "Error listing files", err, nil), nil
 	}
 
-	log.Info("Sending list of files to client")
+	logger2.Info("Sending list of files to client")
 	returningFiles := make([]*pb.File, 0)
 
 	for _, file := range files {
@@ -103,22 +104,22 @@ func (s *Server) ListFiles(ctx context.Context, _ *emptypb.Empty) (*pb.ListFiles
 }
 
 func (s *Server) SendFileToClient(ctx context.Context, request *pb.SendFileToClientRequest) (*pb.SendFileToClientResponse, error) {
-	log.Info("Client requested file", request.Payload.File.Name)
+	logger2.Info("Client requested file", request.Payload.File.Name)
 	return message.NewSendFileToClientResponse(ctx, int32(pb.SuccessEnum_READY_TO_SEND), "Retrieved file", nil, nil), nil
 }
 
 func (s *Server) DeleteFile(ctx context.Context, request *pb.DeleteFileRequest) (*pb.DeleteFileResponse, error) {
 	err := os.Remove(path.Join(fmt.Sprintf(s.Config.OutputPath, s.SessionID), request.Payload.File.Name))
 	if err != nil {
-		log.Error(err, "Failed to delete a file")
+		logger.Error(err, "Failed to delete a file")
 		return message.NewDeleteFileResponse(ctx, int32(pb.ErrorsEnum_FAILED_DELETE_FILE), "Failed to delete file", err), nil
 	}
 
-	log.Info("File was deleted successfully")
+	logger2.Info("File was deleted successfully")
 
 	files, _ := s.ListFiles(ctx, &emptypb.Empty{})
 	if !files.Successful {
-		log.Error(err, "Couldn't list files")
+		logger.Error(err, "Couldn't list files")
 		return message.NewDeleteFileResponse(ctx, int32(pb.ErrorsEnum_FAILED_LISTING_FILES), "Couldn't list files", nil), nil
 	}
 
@@ -131,17 +132,17 @@ func (s *Server) DeleteFile(ctx context.Context, request *pb.DeleteFileRequest) 
 func (s *Server) DeleteSession(ctx context.Context, _ *emptypb.Empty) (*pb.DeleteSessionResponse, error) {
 	err := os.Remove(fmt.Sprintf(s.Config.OutputPath, s.SessionID))
 	if err != nil {
-		log.Error(err, "Failed to delete session folder")
+		logger.Error(err, "Failed to delete session folder")
 		return message.NewDeleteSessionResponse(ctx, int32(pb.ErrorsEnum_FAILED_DELETE_SESSION), "Failed to close the session", err), nil
 	}
 
 	err = s.Ws.Close()
 	if err != nil {
-		log.Error(err, "Failed to close websocket connection")
+		logger.Error(err, "Failed to close websocket connection")
 		return message.NewDeleteSessionResponse(ctx, int32(pb.ErrorsEnum_FAILED_DELETE_SESSION), "Failed to close the session", err), nil
 	}
 
-	log.Info("Session deleted, disconnecting client from the server")
+	logger2.Info("Session deleted, disconnecting client from the internal")
 	s.SessionID = ""
 
 	return message.NewDeleteSessionResponse(ctx, int32(pb.SuccessEnum_SESSION_DELETE), "Your session was deleted, forever.", nil), nil

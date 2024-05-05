@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.33.0
 // 	protoc        v3.21.9
-// source: server.proto
+// source: internal.proto
 
 package protos
 

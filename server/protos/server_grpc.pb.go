@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.21.9
-// source: server.proto
+// source: internal.proto
 
 package protos
 
@@ -102,7 +102,7 @@ func (c *ytdlClient) DeleteSession(ctx context.Context, in *emptypb.Empty, opts 
 	return out, nil
 }
 
-// YtdlServer is the server API for Ytdl service.
+// YtdlServer is the internal API for Ytdl service.
 // All implementations should embed UnimplementedYtdlServer
 // for forward compatibility
 type YtdlServer interface {
@@ -289,5 +289,5 @@ var Ytdl_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "server.proto",
+	Metadata: "internal.proto",
 }

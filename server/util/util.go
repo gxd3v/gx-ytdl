@@ -2,9 +2,12 @@ package util
 
 import (
 	"errors"
+	"github.com/gx/youtubeDownloader/internal/logger"
 	m "github.com/gx/youtubeDownloader/models"
+	"net"
 	"net/url"
 	"regexp"
+	"time"
 )
 
 func ResponseJSONBody(status, message string) m.JSONBodyMessage {
@@ -27,4 +30,14 @@ func ParseURL(u string) (*url.URL, error) {
 	}
 
 	return nil, errors.New("url is not valid")
+}
+
+func CheckPortBusy(host, port string) bool {
+	if conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), 3*time.Second); err != nil {
+		logger.Warn().Msgf("port %s is busy for host %s", port, host)
+		return true
+	} else {
+		_ = conn.Close()
+		return false
+	}
 }

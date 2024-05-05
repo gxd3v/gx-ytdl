@@ -8,10 +8,6 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-/*
-*pb.DeleteSessionResponse
- */
-
 func NewDownloadResponse(_ context.Context, code int32, msg string, err error) *pb.DownloadResponse {
 	var response pb.DownloadResponse
 

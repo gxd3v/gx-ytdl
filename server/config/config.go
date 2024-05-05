@@ -1,55 +1,44 @@
 package config
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gx/youtubeDownloader/constants"
+	"github.com/gx/youtubeDownloader/internal/logger"
 	"os"
 )
 
-func Get() (*Config, error) {
-	var config Config
+const configFile = "config.json"
 
-	if value, ok := os.LookupEnv(config.envString("SERVICE-ID")); !ok {
-		return nil, errors.New("no service id found in env variables")
-	} else {
-		config.ServiceID = value
+func New(_ context.Context) *Config {
+	cfg := new(Config)
+
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		logger.Fatal().Err(err).Msgf("failed to read %s", configFile)
+		os.Exit(-1)
 	}
 
-	if value, ok := os.LookupEnv(config.envString("CONNECTION-ROUTE")); !ok {
-		return nil, errors.New("no connection route found in env variables")
-	} else {
-		config.ConnectionRoute = value
+	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to parse file into config structure")
+		os.Exit(-1)
 	}
 
-	if value, ok := os.LookupEnv(config.envString("PYTHON-BINARY")); !ok {
-		return nil, errors.New("no python binary found in env variables")
+	if value, ok := os.LookupEnv("DB_PWD"); !ok {
+		logger.Fatal().Err(errors.New("no env variable found for database connection")).Msg("database connection not found")
+		os.Exit(-1)
 	} else {
-		config.PythonBinary = value
+		conn, err := base64.StdEncoding.DecodeString(value)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("database connection string invalid")
+			os.Exit(-1)
+		}
+
+		cfg.Database.Conn = fmt.Sprintf(cfg.Database.Conn, string(conn))
 	}
 
-	if value, ok := os.LookupEnv(config.envString("DOWNLOADER-PATH")); !ok {
-		return nil, errors.New("no downloader path found in env variables")
-	} else {
-		config.DownloaderPath = value
-	}
-
-	if value, ok := os.LookupEnv(config.envString("OUTPUT-PATH")); !ok {
-		return nil, errors.New("no output path found in env variables")
-	} else {
-		config.OutputPath = value
-	}
-
-	if value, ok := os.LookupEnv(config.envString("SODA-PATH")); !ok {
-		return nil, errors.New("no soda path found in env variables")
-	} else {
-		config.SodaPath = value
-	}
-
-	return &config, nil
-}
-
-func (config *Config) envString(val string) string {
-	config.ServicePrefix = constants.ServicePrefix
-	return fmt.Sprintf("GX-%s-%s", config.ServicePrefix, val)
+	return cfg
 }
