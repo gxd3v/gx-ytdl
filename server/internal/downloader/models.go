@@ -1,32 +1,33 @@
 package downloader
 
-import (
-	"github.com/gorilla/websocket"
-	"github.com/gx/youtubeDownloader/config"
-	"github.com/gx/youtubeDownloader/database"
-)
+import "time"
 
-//type Business interface {
-//	UpgradeConnection(ctx *gin.Context)
-//	Download(ctx *gin.Context, request *protos.DownloadRequest) *protos.DownloadResponse
-//	CreateSessionFolder(ctx *gin.Context, request *protos.CreateSessionFolderRequest) *protos.CreateSessionFolderResponse
-//	ListFiles(ctx *gin.Context) *protos.ListFilesResponse
-//	SendFileToClient(ctx *gin.Context, request *protos.SendFileToClientRequest) *protos.SendFileToClientResponse
-//	DeleteFile(ctx *gin.Context, request *protos.DeleteFileRequest) *protos.DeleteFileResponse
-//	DeleteSession(ctx *gin.Context) *protos.DeleteSessionResponse
-//}
-
-type Server struct {
-	Config    *config.Config
-	Ws        *websocket.Conn
-	SessionID string `json:"sessionID,omitempty"`
-	Storage   string `json:"storage,omitempty"`
-	Database  *database.Database
+type Ytdl struct {
+	Id        string        `json:"id"`
+	CreatedAt time.Time     `json:"createdAt"`
+	UpdatedAt time.Time     `json:"updatedAt"`
+	DeletedAt *time.Time    `json:"deletedAt"`
+	CreatedBy string        `json:"createdBy"`
+	Url       string        `json:"url"`
+	StorePath string        `json:"storePath"`
+	SessionId string        `json:"sessionId"`
+	Ttl       time.Duration `json:"ttl"`
+	Active    bool          `json:"active"`
+	FileSize  int64         `json:"fileSize"`
 }
 
-type Route struct {
-	Path       string `json:"path"`
-	Method     string `json:"method"`
-	Controller func() `json:"-"`
-	RateLimit  int32  `json:"rateLimit"`
+type Session struct {
+	Id        string     `json:"id"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"deletedAt"`
+	CreatedBy string     `json:"createdBy"`
+	Session   string     `json:"session"`
+	LastLogin time.Time  `json:"lastLogin"`
+}
+
+type File struct {
+	Name string
+	Size int64
+	Ttl  time.Duration
 }

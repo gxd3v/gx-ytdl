@@ -12,8 +12,6 @@ import (
 	"os"
 )
 
-var _ pb.YtdlServer = (*downloader)(nil)
-
 func StartServer(ctx context.Context, host, port string) error {
 	app := buffalo.New(buffalo.Options{
 		Host:    fmt.Sprintf("%s:%s", host, port),
