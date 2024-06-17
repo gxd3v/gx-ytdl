@@ -2,8 +2,8 @@ package util
 
 import (
 	"errors"
-	"github.com/gx/youtubeDownloader/internal/logger"
-	m "github.com/gx/youtubeDownloader/models"
+	"github.com/gx/youtubeDownloader/internal/core/logger"
+	m "github.com/gx/youtubeDownloader/internal/models"
 	"net"
 	"net/url"
 	"regexp"

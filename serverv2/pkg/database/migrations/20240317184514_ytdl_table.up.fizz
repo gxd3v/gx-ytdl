@@ -1,0 +1,13 @@
+create_table("ytdl") {
+    t.Column("id", "string", {primary: true})
+    t.Column("created_at", "timestamp")
+    t.Column("updated_at", "timestamp")
+    t.Column("deleted_at", "timestamp")
+    t.Column("created_by", "string")
+    t.Column("url", "string")
+    t.Column("store_path", "string")
+    t.Column("session_id", "string")
+    t.Column("ttl", "int")
+    t.Column("active", "bool", {"default": true})
+    t.Column("file_size", "int")
+}

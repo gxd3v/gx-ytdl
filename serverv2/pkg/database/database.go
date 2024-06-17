@@ -2,18 +2,22 @@ package database
 
 import (
 	"github.com/gobuffalo/pop/v6"
-	"github.com/gx/youtubeDownloader/config"
-	"github.com/gx/youtubeDownloader/internal/core/logger"
+	"github.com/gx/gx-ytdl/serverv2/config"
+	"github.com/gx/gx-ytdl/serverv2/pkg/logger"
+	"os"
+	"path"
 )
 
-func Connect(cfg config.Database) (*pop.Connection, error) {
+func Connect(cfg *config.Database) (*pop.Connection, error) {
 	conn, err := pop.Connect(cfg.Conn)
 	if err != nil {
 		logger.Err(err).Msg("couldn't connect to database")
 		return nil, err
 	}
 
-	migrator, err := pop.NewFileMigrator("./migrations", conn)
+	cwd, _ := os.Getwd()
+
+	migrator, err := pop.NewFileMigrator(path.Join(cwd, "pkg", "database", "migrations"), conn)
 	if err != nil {
 		logger.Err(err).Msg("failed to read migration files")
 		return nil, err

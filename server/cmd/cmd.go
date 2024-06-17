@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"context"
-	"github.com/gx/youtubeDownloader/internal/logger"
-	"github.com/gx/youtubeDownloader/internal/transporters"
+	"github.com/gx/youtubeDownloader/internal/core/logger"
+	"github.com/gx/youtubeDownloader/internal/core/transporters"
 )
 
 func Run() {

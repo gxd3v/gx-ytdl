@@ -1,0 +1,8 @@
+create_table("banned_ip") {
+    t.Column("id", "string", {primary: true})
+    t.Column("created_at", "timestamp")
+    t.Column("updated_at", "timestamp")
+    t.Column("deleted_at", "timestamp")
+    t.Column("created_by", "string")
+    t.Column("ip", "string")
+}

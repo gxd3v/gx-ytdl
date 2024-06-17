@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gx/youtubeDownloader/internal/logger"
+	"github.com/gx/youtubeDownloader/internal/core/logger"
 	"os"
 )
 
