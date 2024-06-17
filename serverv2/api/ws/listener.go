@@ -28,9 +28,9 @@ func startListener(ctx buffalo.Context) error {
 			break
 		}
 
-		logger.Info().Msgf("got a message: %s", base64.StdEncoding.EncodeToString(message))
+		
 
-	}
+	} 
 
 	return nil
 }
@@ -48,6 +48,7 @@ func checkClientDisconnected(ctx buffalo.Context, msgType int, err error) bool {
 			_ = ws.Close()
 			return true
 		}
+
 		logger.Err(err).Msg("failed to read client message")
 		return false
 	}

@@ -1,0 +1,25 @@
+package gx.ytdl.protocol
+syntax = "proto3"
+
+message DownloadRequestPayload{
+    bool   audio = 1 [json_name = "audio"];
+    string url   = 2 [json_name = "url"];
+}
+
+message CreateSessionFolderRequestPayload{
+  string session = 1 [json_name = "session"];
+}
+
+message SendFileToClientRequestPayload{
+  File file = 1 [json_name = "file"];
+}
+
+message DeleteFileRequestPayload{
+  File file = 1 [json_name = "file"];
+}
+
+message CreateSessionRequestPayload{}
+
+message DeleteSessionRequestPayload{
+  string session = 1 [json_name = "session"];
+}

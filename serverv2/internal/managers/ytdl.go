@@ -8,3 +8,5 @@ import (
 type Ytdl interface {
 	List(ctx context.Context, sort, filters map[string]database.Filter)
 }
+
+type YtdlStorage storage.Generic[models.Ytdl]

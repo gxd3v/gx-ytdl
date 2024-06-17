@@ -1,0 +1,19 @@
+package gx.ytdl.protocol
+syntax = "proto3"
+
+go_package = "github.com/gx/gx-ytdl/server2/pkg/generated/protocol"
+
+
+message Message {
+    gx.ytdl.action.Action action = 1;
+    oneof Payload {
+        gx.ytdl.protocol.DownloadVideoAudioPayload download_video_audio = 0;
+        gx.ytdl.protocol.DownloadVideoPayload download_video = 1;
+        gx.ytdl.protocol.DownloadAudioPayload download_audio = 2;
+        gx.ytdl.protocol.ListFilesPayload list_files = 3;
+        gx.ytdl.protocol.RetrieveFilePayload retrieve_file = 4;
+        gx.ytdl.protocol.DeleteFilePayload delete_file = 5;
+        gx.ytdl.protocol.DeleteSessionPayload delete_session = 6;
+        gx.ytdl.protocol.CreateSessionPayload create_session = 7;
+    }
+}

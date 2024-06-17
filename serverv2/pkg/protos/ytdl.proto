@@ -1,0 +1,3 @@
+package gx.ytdl
+syntax = "proto3"
+
